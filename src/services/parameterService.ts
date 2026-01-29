@@ -1,13 +1,18 @@
 import api from '../lib/axios';
-import type { SystemParameter } from '../config/constants';
-import type { ApiResponse } from '../types/api';
+import { SystemParameter } from '../config/constants';
+import { ApiResponse } from '../types/api';
 
 export const getParametersByCategory = async (category: string): Promise<SystemParameter[]> => {
-    // Ajusta la URL según tu Controller de Spring Boot
-    // Opción A: Query Param
-    const { data } = await api.get<ApiResponse<SystemParameter[]>>(`/generic/parameters`, {
-        params: { category }
+    // CORRECCIÓN: Ajustamos la URL y el nombre del parámetro según tu backend
+    // Antes: /generic/parameters?category=...
+    // Ahora: /generic/parameters/code?categoryCode=...
+    
+    const { data } = await api.get<SystemParameter[]>(`/generic/parameters/code`, {
+        params: { categoryCode: category } 
     });
     
-    return data.data; 
+    // NOTA: Revisa si tu backend devuelve "data" envuelta en ApiResponse o el array directo.
+    // Según tu ejemplo de JSON anterior, devolvía el array directo: [ {id:..}, {id:..} ]
+    // Si es así, devolvemos 'data' tal cual.
+    return data; 
 };

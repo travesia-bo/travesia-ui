@@ -1,6 +1,5 @@
 import React from "react";
 
-// Definimos la estructura de una opción (Label + Value)
 export interface SelectOption {
     value: string | number;
     label: string;
@@ -11,9 +10,19 @@ interface Props extends React.SelectHTMLAttributes<HTMLSelectElement> {
   options: SelectOption[];
   error?: string;
   placeholder?: string;
+  isLoading?: boolean;
+  enableDefaultOption?: boolean; // 1. NUEVA PROPIEDAD
 }
 
-export const TravesiaSelect = ({ label, options, error, placeholder = "Seleccione...", ...props }: Props) => {
+export const TravesiaSelect = ({ 
+    label, 
+    options, 
+    error, 
+    isLoading, 
+    placeholder = "Seleccione...", 
+    enableDefaultOption = false, // Por defecto sigue bloqueada (para formularios)
+    ...props 
+}: Props) => {
   return (
     <div className="form-control w-full">
       <label className="label">
@@ -22,10 +31,18 @@ export const TravesiaSelect = ({ label, options, error, placeholder = "Seleccion
       
       <select 
         className={`select select-bordered w-full ${error ? "select-error" : ""}`} 
+        disabled={isLoading}
         {...props}
       >
-        <option disabled value="">{placeholder}</option>
-        {options.map((opt) => (
+        {/* 2. LÓGICA CORREGIDA: Solo se deshabilita si NO permitimos default y NO está cargando */}
+        <option 
+            disabled={isLoading || !enableDefaultOption} 
+            value=""
+        >
+            {isLoading ? "Cargando datos..." : placeholder}
+        </option>
+        
+        {!isLoading && options.map((opt) => (
             <option key={opt.value} value={opt.value}>
                 {opt.label}
             </option>

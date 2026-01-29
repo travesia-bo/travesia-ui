@@ -7,6 +7,7 @@ export const PARAM_CATEGORIES = {
     PAYMENT_METHOD: 'PAYMENT_METHOD', // Ej: 401 (QR), 402 (Transferencia)
     PRODUCT_CATEGORY: 'PRODUCT_CATEGORY', // Ej: 601 (Electrónica)
     RESERVATION_STATUS: 'RESERVATION_STATUS', // Ej: Confirmada, Cancelada
+    PROVIDER_STATUS: 'PROVIDER_STATUS', // 121, 122...
 } as const;
 
 // Tipos base para Travesía

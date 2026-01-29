@@ -103,4 +103,12 @@
   .btn-travesia-ghost:hover {
     background-color: rgba(0,0,0,0.05) !important;
   }
+  
+  /* Botón CREATE (Verde Oscuro) */
+  .btn-travesia-create {
+    background-color: #15803d !important; /* green-700 */
+    border-color: #15803d !important;
+    color: white !important;
+  }
+  .btn-travesia-create:hover { background-color: #14532d !important; }
 }

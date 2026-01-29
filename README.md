@@ -106,3 +106,6 @@ npm install zustand jwt-decode
 
 # ico
 npm install lucide-react
+
+# para manejar os estados en memoria
+npm install @tanstack/react-query

@@ -5,7 +5,7 @@ type ButtonVariant =
   | "primary" | "secondary" | "neutral" | "ghost" 
   | "save" | "delete" | "cancel" | "edit" // CRUD Básico
   | "excel" | "pdf" // Reportes
-  | "success" | "error" | "warning" | "info"; 
+  | "success" | "error" | "warning" | "info" | "create"; 
 
 interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   label?: string; // Ahora es opcional (porque los botones redondos no llevan texto)
@@ -39,6 +39,7 @@ export const TravesiaButton = ({
       case "edit": return "btn-travesia-edit border-none";
       case "excel": return "btn-travesia-excel border-none";
       case "pdf": return "btn-travesia-pdf border-none";
+      case "create": return "btn-travesia-create border-none";
       
       // Defaults de DaisyUI
       case "neutral": return "btn-neutral text-white";

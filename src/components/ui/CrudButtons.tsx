@@ -1,4 +1,4 @@
-import { Save, X, Trash2, Pencil, FileSpreadsheet, FileText } from "lucide-react";
+import { Save, X, Trash2, Pencil, FileSpreadsheet, FileText, Plus } from "lucide-react";
 import { TravesiaButton } from "./TravesiaButton";
 
 // Tipos para pasar props extra (como onClick)
@@ -49,6 +49,7 @@ export const BtnDeleteIcon = (props: BaseBtnProps) => (
     />
 );
 
+
 // 5. BOTÓN ELIMINAR NORMAL (Con texto, para confirmaciones)
 export const BtnDelete = ({ label = "Eliminar", ...props }: BaseBtnProps) => (
     <TravesiaButton 
@@ -74,6 +75,16 @@ export const BtnPDF = ({ label = "Exportar PDF", ...props }: BaseBtnProps) => (
         variant="pdf" 
         label={label}
         icon={<FileText size={18} />} 
+        {...props} 
+    />
+);
+
+// 7. TABLAS
+export const BtnCreate = ({ label = "Adicionar", ...props }: BaseBtnProps) => (
+    <TravesiaButton 
+        variant="create" 
+        label={label}
+        icon={<Plus size={18} />} 
         {...props} 
     />
 );
@@ -113,3 +124,21 @@ export const BtnModalNo = ({ label = "No, Cancelar", ...props }: BaseBtnProps) =
         {...props} 
     />
 );
+
+/**
+ * 11. COMPONENTE AGRUPADOR PARA TABLAS
+ * Este es el que faltaba y causaba el error de importación.
+ */
+interface CrudButtonsProps {
+    onEdit: () => void;
+    onDelete: () => void;
+}
+
+export const CrudButtons = ({ onEdit, onDelete }: CrudButtonsProps) => {
+    return (
+        <div className="flex justify-end gap-2">
+            <BtnEdit onClick={onEdit} />
+            <BtnDeleteIcon onClick={onDelete} />
+        </div>
+    );
+};
