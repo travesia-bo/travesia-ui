@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { X, MapPin, Box, Store, Tag } from "lucide-react"; // Iconos
+import { X, MapPin, Box, Store, Tag } from "lucide-react"; 
 
 // Hooks y Servicios
 import { createProduct, updateProduct } from "../services/productService";
@@ -14,7 +14,7 @@ import { useToast } from "../../../context/ToastContext";
 // UI Components
 import { TravesiaInput } from "../../../components/ui/TravesiaInput";
 import { RichSelect } from "../../../components/ui/RichSelect";
-import { TravesiaSwitch } from "../../../components/ui/TravesiaSwitch";
+// import { TravesiaSwitch } from "../../../components/ui/TravesiaSwitch"; // <--- YA NO SE USA AQUÍ
 import { BtnSave, BtnCancel } from "../../../components/ui/CrudButtons";
 
 // Types
@@ -30,75 +30,58 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
     const { success, error: toastError } = useToast();
     const queryClient = useQueryClient();
     
-    // --- ESTADO LOCAL ---
     const [isCreatingLocation, setIsCreatingLocation] = useState(false);
 
-    // --- CARGA DE DATOS ---
-    // React Query se encarga de cachear esto, así que no se harán peticiones extra innecesarias
     const { data: providers = [], isLoading: loadingProviders } = useProviders();
     const { data: locations = [], isLoading: loadingLocations } = useLocations();
     const { parameters: categories, isLoading: loadingCategories } = useParameters(PARAM_CATEGORIES.PRODUCT_CATEGORY);
 
-    // --- FORMULARIO ---
     const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<CreateProductRequest>({
         defaultValues: {
-            status: true,
+            // status: true, <--- ELIMINADO
             physicalStock: 0,
             peopleCapacity: 0,
             providerCost: 0
         }
     });
 
-    // ✅ EFECTO CLAVE: Cargar datos al Editar
     useEffect(() => {
         if (isOpen) {
             if (productToEdit) {
-                // MODO EDICIÓN: Llenamos el formulario
+                // MODO EDICIÓN
                 setValue("name", productToEdit.name);
                 setValue("description", productToEdit.description);
                 setValue("categoryType", productToEdit.categoryCode);
                 setValue("physicalStock", productToEdit.physicalStock);
                 setValue("peopleCapacity", productToEdit.peopleCapacity);
                 setValue("providerCost", productToEdit.providerCost);
-                setValue("status", productToEdit.status);
+                // setValue("status", productToEdit.status); <--- ELIMINADO
                 
-                // RECUPERAR ID DEL PROVEEDOR
-                if (productToEdit.providerId) {
-                    setValue("providerId", productToEdit.providerId);
-                }
+                if (productToEdit.providerId) setValue("providerId", productToEdit.providerId);
 
-                // RECUPERAR ID DE UBICACIÓN
                 if (productToEdit.locationId) {
-                    setIsCreatingLocation(false); // Es existente
+                    setIsCreatingLocation(false);
                     setValue("locationId", productToEdit.locationId);
                 } else {
-                    // Si no tiene ID pero estamos editando, quizás queramos crear una nueva o seleccionar
-                    // Por defecto lo ponemos en seleccionar
                     setIsCreatingLocation(false);
                 }
 
             } else {
-                // MODO CREAR: Limpiamos todo
-                reset({ status: true, physicalStock: 0, peopleCapacity: 0, providerCost: 0 });
+                // MODO CREAR
+                reset({ physicalStock: 0, peopleCapacity: 0, providerCost: 0 }); // Sin status
                 setIsCreatingLocation(false);
             }
         }
     }, [isOpen, productToEdit, reset, setValue]);
 
-
-    // --- MUTATION ---
     const mutation = useMutation({
         mutationFn: (data: CreateProductRequest) => {
-            // Clonamos para no mutar el original
             const payload = { ...data };
             
-            // Limpieza inteligente de datos según el modo de ubicación
             if (isCreatingLocation) {
-                payload.locationId = null; // Borramos ID si estamos creando
-                // newLocation va lleno
+                payload.locationId = null; 
             } else {
-                payload.newLocation = null; // Borramos objeto si seleccionamos ID
-                // locationId va lleno
+                payload.newLocation = null; 
             }
             
             return productToEdit 
@@ -107,7 +90,6 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["products"] });
-            // Si creamos una ubicación nueva, recargamos la lista de ubicaciones
             if (isCreatingLocation) {
                 queryClient.invalidateQueries({ queryKey: ["locations"] });
             }
@@ -131,7 +113,7 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                 <div className="px-6 py-4 border-b border-base-200 flex justify-between items-center bg-base-100 sticky top-0 z-10">
                     <div>
                         <h3 className="font-bold text-xl text-primary flex items-center gap-2">
-                            {productToEdit ? <Box size={20}/> : <Box size={20}/>}
+                            <Box size={20}/>
                             {productToEdit ? "Editar Producto" : "Nuevo Producto"}
                         </h3>
                         <p className="text-xs text-base-content/60">
@@ -143,12 +125,12 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                     </button>
                 </div>
 
-                {/* BODY SCROLLABLE */}
+                {/* BODY */}
                 <form onSubmit={handleSubmit(onSubmit)} className="p-6 overflow-y-auto max-h-[75vh] custom-scrollbar">
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                         
-                        {/* COLUMNA 1: DATOS GENERALES */}
+                        {/* COLUMNA 1 */}
                         <div className="space-y-4">
                             <h4 className="text-xs font-bold uppercase tracking-wider text-base-content/40 mb-2">Información Básica</h4>
 
@@ -185,8 +167,7 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                              <input type="hidden" {...register("categoryType", { required: true })} />
                         </div>
 
-
-                        {/* COLUMNA 2: PROVEEDOR Y LOGÍSTICA */}
+                        {/* COLUMNA 2 */}
                         <div className="space-y-4">
                             <h4 className="text-xs font-bold uppercase tracking-wider text-base-content/40 mb-2">Logística y Costos</h4>
 
@@ -198,7 +179,7 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                                 options={providers.map(p => ({
                                     value: p.id,
                                     label: p.name,
-                                    subtitle: p.cityName // Asumiendo que el provider tiene cityName
+                                    subtitle: p.cityName 
                                 }))}
                                 value={watch("providerId")}
                                 onChange={(val) => setValue("providerId", Number(val))}
@@ -214,44 +195,34 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                                     {...register("providerCost", { required: "Requerido", min: 0 })}
                                     error={errors.providerCost?.message}
                                 />
-                                {/* SWITCH DE ESTADO */}
-                                <div className="form-control">
-                                    <label className="label"><span className="label-text font-medium">Estado</span></label>
-                                    <div className="flex items-center gap-3 px-1 h-[48px]">
-                                        <TravesiaSwitch 
-                                            checked={watch("status")} 
-                                            onChange={() => setValue("status", !watch("status"))} 
-                                        />
-                                        <span className={`text-sm font-medium ${watch("status") ? 'text-success' : 'text-base-content/50'}`}>
-                                            {watch("status") ? "Activo" : "Inactivo"}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
+                                
+                                {/* ELIMINAMOS EL INPUT DE STOCK FÍSICO Y CAPACIDAD AQUI PARA REORGANIZAR */}
                                 <TravesiaInput
                                     label="Stock Físico"
                                     type="number"
                                     {...register("physicalStock", { required: "Requerido", min: 0 })}
                                 />
+                            </div>
+
+                            <div className="grid grid-cols-1">
                                 <TravesiaInput
                                     label="Capacidad (Pers.)"
                                     type="number"
                                     {...register("peopleCapacity", { required: "Requerido", min: 0 })}
                                 />
                             </div>
+                            
+                            {/* --- AQUÍ ESTABA EL SWITCH DE ESTADO, SE HA ELIMINADO --- */}
                         </div>
                     </div>
 
-                    {/* SECCIÓN UBICACIÓN (ANCHO COMPLETO) */}
+                    {/* SECCIÓN UBICACIÓN (Igual que antes) */}
                     <div className="mt-8 bg-base-200/40 p-5 rounded-xl border border-base-200">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                             <h4 className="text-xs font-bold uppercase tracking-wider text-base-content/60 flex items-center gap-2">
                                 <MapPin size={16} className="text-primary"/> Ubicación de Almacenamiento
                             </h4>
                             
-                            {/* Toggle Selector */}
                             <div className="tabs tabs-boxed bg-base-100 border border-base-300 p-1 scale-90 origin-right">
                                 <a 
                                     className={`tab h-8 min-h-0 text-xs font-bold rounded-md ${!isCreatingLocation ? 'tab-active bg-primary text-primary-content' : ''}`}
@@ -268,7 +239,6 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                             </div>
                         </div>
 
-                        {/* MODO CREAR NUEVA */}
                         {isCreatingLocation ? (
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in">
                                 <div className="md:col-span-1">
@@ -295,7 +265,6 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                                 </div>
                             </div>
                         ) : (
-                            /* MODO SELECCIONAR EXISTENTE */
                             <div className="animate-fade-in">
                                 <RichSelect
                                     label="Buscar Ubicación"
@@ -321,7 +290,6 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
 
                 </form>
 
-                {/* FOOTER */}
                 <div className="p-5 border-t border-base-200 bg-base-100 flex justify-end gap-3">
                     <BtnCancel onClick={onClose} />
                     <BtnSave 

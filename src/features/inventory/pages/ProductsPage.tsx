@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useProducts } from '../hooks/useProducts';
-import { useParameters } from '../../../hooks/useParameters'; // <--- 1. Importar Hook
-import { PARAM_CATEGORIES } from '../../../config/constants'; // <--- 2. Importar Constante
+import { useParameters } from '../../../hooks/useParameters'; 
+import { PARAM_CATEGORIES } from '../../../config/constants'; 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { updateProductStatus, deleteProduct } from '../services/productService';
 
@@ -10,12 +10,12 @@ import { TravesiaInput } from '../../../components/ui/TravesiaInput';
 import { TravesiaSelect } from '../../../components/ui/TravesiaSelect';
 import { CrudButtons, BtnCreate } from '../../../components/ui/CrudButtons';
 import { ConfirmationModal } from '../../../components/ui/ConfirmationModal';
-import { TravesiaBadge } from '../../../components/ui/TravesiaBadge'; // <--- 3. Importar Nuevo Badge
+import { TravesiaBadge } from '../../../components/ui/TravesiaBadge'; 
 import { MapPin, Package, Users } from 'lucide-react';
 import { useToast } from '../../../context/ToastContext';
 import { Product } from '../types';
 import { TravesiaSwitch } from '../../../components/ui/TravesiaSwitch';
-import { ProductFormModal } from '../components/ProductFormModal'; // Importar el Modal
+import { ProductFormModal } from '../components/ProductFormModal'; 
 
 export const ProductsPage = () => {
     const { success, error: toastError } = useToast();
@@ -24,13 +24,13 @@ export const ProductsPage = () => {
     // 1. DATA FETCHING
     const { data: products = [], isLoading } = useProducts();
     
-    // Cargar Categorías para el Select
+    // Cargar Categorías
     const { parameters: categories, isLoading: loadingCategories } = useParameters(PARAM_CATEGORIES.PRODUCT_CATEGORY);
 
     // 2. FILTROS LOCALES
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState<string>(''); 
-    const [filterCategory, setFilterCategory] = useState<string>(''); // <--- 4. Nuevo Estado
+    const [filterCategory, setFilterCategory] = useState<string>(''); 
 
     const filteredProducts = useMemo(() => {
         return products.filter(p => {
@@ -41,7 +41,6 @@ export const ProductsPage = () => {
                 ? true 
                 : String(p.status) === filterStatus;
 
-            // <--- 5. Lógica de Filtrado por Categoría
             const matchesCategory = filterCategory === ''
                 ? true
                 : p.categoryCode === Number(filterCategory);
@@ -50,20 +49,38 @@ export const ProductsPage = () => {
         });
     }, [products, searchTerm, filterStatus, filterCategory]);
 
-    // ... (Mutation logic igual que antes) ...
-    const statusMutation = useMutation({ /* ... */ });
-    const deleteMutation = useMutation({ /* ... */ });
+    // 3. ESTADOS PARA MODALES
     const [isStatusModalOpen, setStatusModalOpen] = useState(false);
     const [productToToggle, setProductToToggle] = useState<Product | null>(null);
-    const handleStatusClick = (product: Product) => { /* ... */ };
-    const confirmStatusChange = () => { /* ... */ };
-
-    // --- ESTADOS PARA MODAL DE CREACIÓN/EDICIÓN ---
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
+    // --- LÓGICA RECUPERADA: CAMBIO DE ESTADO ---
+    const statusMutation = useMutation({
+        mutationFn: ({ id, status }: { id: number; status: boolean }) => updateProductStatus(id, status),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['products'] });
+            setStatusModalOpen(false);
+            setProductToToggle(null);
+            success("Estado actualizado correctamente.");
+        },
+        onError: () => toastError("Error al cambiar el estado.")
+    });
+
+    const handleStatusClick = (product: Product) => {
+        setProductToToggle(product);
+        setStatusModalOpen(true);
+    };
+
+    const confirmStatusChange = () => {
+        if (productToToggle) {
+            statusMutation.mutate({ id: productToToggle.id, status: !productToToggle.status });
+        }
+    };
+
+    // --- LÓGICA RECUPERADA: CREAR / EDITAR ---
     const handleCreate = () => {
-        setEditingProduct(null); // Limpiar para crear
+        setEditingProduct(null);
         setIsFormModalOpen(true);
     };
 
@@ -71,6 +88,16 @@ export const ProductsPage = () => {
         setEditingProduct(product);
         setIsFormModalOpen(true);
     };
+
+    // --- LÓGICA: ELIMINAR ---
+    const deleteMutation = useMutation({
+        mutationFn: deleteProduct,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['products'] });
+            success("Producto eliminado.");
+        },
+        onError: () => toastError("No se pudo eliminar el producto.")
+    });
 
     // 5. DEFINICIÓN DE COLUMNAS
     const columns: Column<Product>[] = [
@@ -88,9 +115,8 @@ export const ProductsPage = () => {
         },
         {
             header: 'Categoría',
-            accessorKey: 'categoryName', // Para ordenamiento
+            accessorKey: 'categoryName', 
             render: (row) => (
-                // <--- 6. AQUÍ USAMOS EL NUEVO BADGE
                 <TravesiaBadge 
                     label={row.categoryName} 
                     code={row.categoryCode} 
@@ -98,7 +124,6 @@ export const ProductsPage = () => {
                 />
             )
         },
-        // ... (Resto de columnas Stocks, Costo, Ubicación igual que antes) ...
         {
             header: 'Stock / Cap.',
             render: (row) => (
@@ -134,33 +159,44 @@ export const ProductsPage = () => {
                 </div>
             )
         },
+        // --- COLUMNA ESTADO (ARREGLADA) ---
         {
-            header: 'Estado',className: 'text-center w-24', // Damos un ancho fijo para que no baile
+            header: 'Estado',
+            className: 'text-center w-24',
             render: (row) => (
-                <div className="flex flex-col items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
-                    
-                    {/* NUESTRO SWITCH PERSONALIZADO */}
-                    <TravesiaSwitch 
-                        checked={row.status}
-                        onChange={() => handleStatusClick(row)}
-                        // Opcional: Si el producto está siendo actualizado en ese momento, podrías pasar loading
-                    />
+                // Usamos un div que atrapa el clic y detiene la propagación
+                <div 
+                    className="flex flex-col items-center justify-center gap-1 cursor-pointer group"
+                    onClick={(e) => {
+                        e.stopPropagation(); // ¡Vital! Evita clicks fantasma
+                        handleStatusClick(row); 
+                    }}
+                >
+                    {/* pointer-events-none asegura que el clic lo reciba el div padre */}
+                    <div className="pointer-events-none transition-transform group-active:scale-95"> 
+                        <TravesiaSwitch 
+                            checked={row.status}
+                            onChange={() => {}} 
+                        />
+                    </div>
 
-                    {/* TEXTO DE APOYO (Opcional, pero ayuda mucho a la claridad) */}
                     <span className={`text-[9px] font-bold tracking-wider ${row.status ? 'text-success' : 'text-base-content/40'}`}>
                         {row.status ? 'ACTIVO' : 'INACTIVO'}
                     </span>
                 </div>
             )
         },
-        
         {
             header: 'Acciones',
             className: 'text-right',
             render: (row) => (
                 <CrudButtons 
-                    onEdit={() => handleEdit(row)} // Conectamos Editar
-                    onDelete={() => { /* ... */ }} 
+                    onEdit={() => handleEdit(row)} 
+                    onDelete={() => {
+                        if(window.confirm("¿Estás seguro de eliminar este producto?")) {
+                            deleteMutation.mutate(row.id);
+                        }
+                    }} 
                 />
             )
         }
@@ -169,7 +205,7 @@ export const ProductsPage = () => {
     
     return (
         <div className="p-6 space-y-6 animate-fade-in">
-            {/* Header igual... */}
+            {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-base-content">Inventario de Productos</h1>
@@ -178,7 +214,7 @@ export const ProductsPage = () => {
                 <BtnCreate onClick={handleCreate} />
             </div>
 
-            {/* 2. Filtros ACTUALIZADOS */}
+            {/* Filtros */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-base-100 p-4 rounded-xl shadow-sm border border-base-200">
                 <div className="md:col-span-2">
                     <TravesiaInput 
@@ -190,14 +226,12 @@ export const ProductsPage = () => {
                     />
                 </div>
                 
-                {/* <--- 7. NUEVO SELECT DE CATEGORÍA */}
                 <div>
                     <TravesiaSelect 
                         label="Categoría"
                         name="categoryFilter"
-                        // Mapeamos los parametros que vienen del hook a opciones
                         options={categories.map(cat => ({ 
-                            value: cat.numericCode, // Usamos el código numérico (ej: 601) como valor
+                            value: cat.numericCode, 
                             label: cat.name 
                         }))}
                         value={filterCategory}
@@ -230,6 +264,7 @@ export const ProductsPage = () => {
                 isLoading={isLoading} 
             />
 
+            {/* MODAL FORMULARIO */}
             {isFormModalOpen && (
                 <ProductFormModal 
                     isOpen={isFormModalOpen}
@@ -238,13 +273,14 @@ export const ProductsPage = () => {
                 />
             )}
 
+            {/* MODAL CONFIRMACIÓN ESTADO */}
             <ConfirmationModal
                 isOpen={isStatusModalOpen}
                 onClose={() => { setStatusModalOpen(false); setProductToToggle(null); }}
                 onConfirm={confirmStatusChange}
                 title={productToToggle?.status ? "¿Deshabilitar?" : "¿Habilitar?"}
                 message={`¿Estás seguro de cambiar el estado de "${productToToggle?.name}"?`}
-                confirmText="Sí, Cambiar"
+                confirmText={productToToggle?.status ? "Sí, Deshabilitar" : "Sí, Habilitar"}
                 variant={productToToggle?.status ? "warning" : "primary"}
                 isLoading={statusMutation.isPending}
             />
