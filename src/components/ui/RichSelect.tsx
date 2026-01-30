@@ -101,7 +101,7 @@ export const RichSelect = ({ label, placeholder, options, value, onChange, error
     const menuContent = (
         <div 
             ref={dropdownRef}
-            className="fixed z-[9999] bg-base-100 border border-base-200 rounded-xl shadow-2xl overflow-hidden flex flex-col animate-fade-in-up"
+            className="fixed z-[10000] bg-base-100 border border-base-200 rounded-xl shadow-2xl overflow-hidden flex flex-col animate-fade-in-up"
             style={{
                 top: menuCoords.top,
                 left: menuCoords.left,

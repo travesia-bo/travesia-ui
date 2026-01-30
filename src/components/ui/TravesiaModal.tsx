@@ -1,31 +1,29 @@
-import { useEffect, useRef, ReactNode } from "react";
+import { useEffect, ReactNode } from "react";
 import { X } from "lucide-react";
 
 interface Props {
     isOpen: boolean;
     onClose: () => void;
-    title: string;
+    title: ReactNode;
     children: ReactNode;
     actions?: ReactNode;
     size?: "sm" | "md" | "lg" | "xl";
 }
 
 export const TravesiaModal = ({ isOpen, onClose, title, children, actions, size = "md" }: Props) => {
-    const modalRef = useRef<HTMLDialogElement>(null);
-
+    
+    // 1. MANEJO DE TECLA ESC (Manual, ya que quitamos el dialog nativo)
     useEffect(() => {
-        const modal = modalRef.current;
-        if (!modal) return;
+        const handleEsc = (e: KeyboardEvent) => {
+            if (isOpen && e.key === "Escape") {
+                onClose();
+            }
+        };
+        window.addEventListener("keydown", handleEsc);
+        return () => window.removeEventListener("keydown", handleEsc);
+    }, [isOpen, onClose]);
 
-        if (isOpen) {
-            modal.showModal();
-        } else {
-            modal.close();
-        }
-    }, [isOpen]);
-
-    // ❌ BORRAMOS handleBackdropClick (Ya no queremos que cierre al clic afuera)
-
+    // Clases de tamaño
     const sizeClasses = {
         sm: "max-w-sm",
         md: "max-w-2xl",
@@ -33,22 +31,25 @@ export const TravesiaModal = ({ isOpen, onClose, title, children, actions, size 
         xl: "max-w-6xl",
     };
 
+    // Si no está abierto, no renderizamos nada (para limpiar el DOM)
+    if (!isOpen) return null;
+
     return (
-        <dialog 
-            ref={modalRef} 
-            // 1. CAMBIO: Quitamos 'modal-bottom' y agregamos 'modal-middle' explícito y z-index alto
-            className="modal modal-middle !m-0 !p-0 z-[9999]"
-            // ✅ AGREGAR ESTO: Capturamos el ESC
-            onCancel={(e) => {
-                e.preventDefault(); // 1. Evitamos que el navegador lo cierre "a escondidas"
-                onClose();          // 2. Ejecutamos tu función para poner isModalOpen(false)
-            }}
-        >
-            <div className={`modal-box ${sizeClasses[size]} p-0 overflow-hidden bg-base-100 shadow-2xl`}>
+        // 2. CAMBIO PRINCIPAL: Usamos <div> en lugar de <dialog>
+        // Usamos 'modal-open' para mostrarlo.
+        // z-[999] es suficiente para estar sobre la página, pero debajo del Select (z-10000)
+        <div className="modal modal-open modal-middle bg-black/50 backdrop-blur-sm !m-0 !p-0 z-[999]">
+            
+            <div 
+                className={`modal-box ${sizeClasses[size]} p-0 overflow-hidden bg-base-100 shadow-2xl relative`}
+                role="dialog"
+                aria-modal="true"
+            >
                 {/* Header */}
                 <div className="bg-base-200 px-6 py-4 flex justify-between items-center border-b border-base-300">
-                    <h3 className="font-bold text-lg text-base-content">{title}</h3>
-                    {/* Botón X: Única forma de salir (además de cancelar) */}
+                    <div className="font-bold text-lg text-base-content flex items-center gap-2">
+                        {title}
+                    </div>
                     <button 
                         type="button"
                         onClick={onClose} 
@@ -70,8 +71,6 @@ export const TravesiaModal = ({ isOpen, onClose, title, children, actions, size 
                     </div>
                 )}
             </div>
-            
-            {/* ❌ BORRAMOS EL FORM BACKDROP AQUI (El que cerraba al hacer clic afuera) */}
-        </dialog>
+        </div>
     );
 };
