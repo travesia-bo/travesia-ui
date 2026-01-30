@@ -14,6 +14,7 @@ import { TravesiaBadge } from '../../../components/ui/TravesiaBadge'; // <--- 3.
 import { MapPin, Package, Users } from 'lucide-react';
 import { useToast } from '../../../context/ToastContext';
 import { Product } from '../types';
+import { TravesiaSwitch } from '../../../components/ui/TravesiaSwitch';
 
 export const ProductsPage = () => {
     const { success, error: toastError } = useToast();
@@ -119,16 +120,21 @@ export const ProductsPage = () => {
             )
         },
         {
-            header: 'Estado',
-            className: 'text-center',
+            header: 'Estado',className: 'text-center w-24', // Damos un ancho fijo para que no baile
             render: (row) => (
-                <div className="flex justify-center" onClick={(e) => e.stopPropagation()}>
-                    <input 
-                        type="checkbox" 
-                        className={`toggle toggle-sm ${row.status ? 'toggle-success' : 'toggle-error'}`}
+                <div className="flex flex-col items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
+                    
+                    {/* NUESTRO SWITCH PERSONALIZADO */}
+                    <TravesiaSwitch 
                         checked={row.status}
-                        onChange={() => handleStatusClick(row)} 
+                        onChange={() => handleStatusClick(row)}
+                        // Opcional: Si el producto está siendo actualizado en ese momento, podrías pasar loading
                     />
+
+                    {/* TEXTO DE APOYO (Opcional, pero ayuda mucho a la claridad) */}
+                    <span className={`text-[9px] font-bold tracking-wider ${row.status ? 'text-success' : 'text-base-content/40'}`}>
+                        {row.status ? 'ACTIVO' : 'INACTIVO'}
+                    </span>
                 </div>
             )
         },
