@@ -1,5 +1,7 @@
 import api from '../../../lib/axios';
-import { Product, ProductStatusUpdate } from '../types';
+import { Product, ProductStatusUpdate, type CreateProductRequest } from '../types';
+import { useQuery } from '@tanstack/react-query';
+import { getLocations } from '../services/locationService';
 
 const BASE_URL = '/inventory/products';
 
@@ -18,4 +20,24 @@ export const updateProductStatus = async (id: number, status: boolean): Promise<
 // 3. DELETE (Para cuando conectes el botón de eliminar)
 export const deleteProduct = async (id: number): Promise<void> => {
     await api.delete(`${BASE_URL}/${id}`);
+};
+
+
+export const createProduct = async (data: CreateProductRequest): Promise<Product> => {
+    const response = await api.post(BASE_URL, data);
+    return response.data;
+};
+
+export const updateProduct = async (id: number, data: CreateProductRequest): Promise<Product> => {
+    const response = await api.put(`${BASE_URL}/${id}`, data);
+    return response.data;
+};
+
+
+export const useLocations = () => {
+    return useQuery({
+        queryKey: ['locations'],
+        queryFn: getLocations,
+        staleTime: 1000 * 60 * 10, // 10 min cache
+    });
 };

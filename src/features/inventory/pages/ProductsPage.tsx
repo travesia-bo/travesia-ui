@@ -15,6 +15,7 @@ import { MapPin, Package, Users } from 'lucide-react';
 import { useToast } from '../../../context/ToastContext';
 import { Product } from '../types';
 import { TravesiaSwitch } from '../../../components/ui/TravesiaSwitch';
+import { ProductFormModal } from '../components/ProductFormModal'; // Importar el Modal
 
 export const ProductsPage = () => {
     const { success, error: toastError } = useToast();
@@ -56,6 +57,20 @@ export const ProductsPage = () => {
     const [productToToggle, setProductToToggle] = useState<Product | null>(null);
     const handleStatusClick = (product: Product) => { /* ... */ };
     const confirmStatusChange = () => { /* ... */ };
+
+    // --- ESTADOS PARA MODAL DE CREACIÓN/EDICIÓN ---
+    const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
+    const handleCreate = () => {
+        setEditingProduct(null); // Limpiar para crear
+        setIsFormModalOpen(true);
+    };
+
+    const handleEdit = (product: Product) => {
+        setEditingProduct(product);
+        setIsFormModalOpen(true);
+    };
 
     // 5. DEFINICIÓN DE COLUMNAS
     const columns: Column<Product>[] = [
@@ -138,13 +153,20 @@ export const ProductsPage = () => {
                 </div>
             )
         },
+        
         {
             header: 'Acciones',
             className: 'text-right',
-            render: (row) => <CrudButtons onEdit={() => {}} onDelete={() => {}} />
+            render: (row) => (
+                <CrudButtons 
+                    onEdit={() => handleEdit(row)} // Conectamos Editar
+                    onDelete={() => { /* ... */ }} 
+                />
+            )
         }
     ];
 
+    
     return (
         <div className="p-6 space-y-6 animate-fade-in">
             {/* Header igual... */}
@@ -153,7 +175,7 @@ export const ProductsPage = () => {
                     <h1 className="text-2xl font-bold text-base-content">Inventario de Productos</h1>
                     <p className="text-sm text-base-content/60">Gestiona habitaciones, transporte y artículos.</p>
                 </div>
-                <BtnCreate onClick={() => alert("Próximamente")} />
+                <BtnCreate onClick={handleCreate} />
             </div>
 
             {/* 2. Filtros ACTUALIZADOS */}
@@ -207,6 +229,14 @@ export const ProductsPage = () => {
                 columns={columns} 
                 isLoading={isLoading} 
             />
+
+            {isFormModalOpen && (
+                <ProductFormModal 
+                    isOpen={isFormModalOpen}
+                    onClose={() => setIsFormModalOpen(false)}
+                    productToEdit={editingProduct}
+                />
+            )}
 
             <ConfirmationModal
                 isOpen={isStatusModalOpen}
