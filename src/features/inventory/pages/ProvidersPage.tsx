@@ -15,6 +15,7 @@ import { Provider } from '../types';
 import { ProviderFormModal } from '../components/ProviderFormModal';
 import { useMutation, useQueryClient } from '@tanstack/react-query'; // Importar
 import { deleteProvider } from '../services/providerService'; // Importar servicio delete
+import { ConfirmationModal } from '../../../components/ui/ConfirmationModal'; // 1. IMPORTAR
 
 export const ProvidersPage = () => {
     // 1. Fetching de Datos
@@ -44,16 +45,21 @@ export const ProvidersPage = () => {
     const queryClient = useQueryClient();
 
     // 1. MUTATION PARA ELIMINAR
+    
+    // Mutation (igual que antes)
     const deleteMutation = useMutation({
         mutationFn: deleteProvider,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['providers'] });
-            // toast.success("Proveedor eliminado");
+            setIsDeleteModalOpen(false); // Cerrar modal al terminar
+            setProviderToDeleteId(null);
         },
-        onError: (error) => {
-            alert("No se pudo eliminar el proveedor. Puede que tenga registros asociados.");
+        onError: () => {
+            setIsDeleteModalOpen(false); // Cerrar también en error (o mostrar otro alert)
+            alert("Error al eliminar");
         }
     });
+
 
     // 2. FUNCIÓN MANEJADORA DE ELIMINACIÓN
     const handleDelete = (id: number) => {
@@ -122,13 +128,13 @@ export const ProvidersPage = () => {
                         setIsModalOpen(true);    // Abrimos modal
                     }}
                     // CONECTAMOS ELIMINAR
-                    onDelete={() => handleDelete(row.id)}
+                    onDelete={() => handleDeleteClick(row.id)}
                 />
             )
         }
     ];
 
-    // ... estados ...
+    // ESTADOS DE MODALES
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingProvider, setEditingProvider] = useState<Provider | null>(null);
 
@@ -138,6 +144,25 @@ export const ProvidersPage = () => {
         setIsModalOpen(true);     // Abre el Modal
     };
 
+    
+    // 2. NUEVOS ESTADOS PARA ELIMINACIÓN
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [providerToDeleteId, setProviderToDeleteId] = useState<number | null>(null);
+
+
+    // 3. NUEVA FUNCIÓN: Solo abre el modal y guarda el ID
+    const handleDeleteClick = (id: number) => {
+        setProviderToDeleteId(id);
+        setIsDeleteModalOpen(true);
+    };
+
+    // 4. NUEVA FUNCIÓN: Ejecuta el borrado real (Se pasa al modal)
+    const handleConfirmDelete = () => {
+        if (providerToDeleteId) {
+            deleteMutation.mutate(providerToDeleteId);
+        }
+    };
+    
     return (
         <div className="p-6 space-y-6 animate-fade-in">
             {/* Header */}
@@ -203,6 +228,18 @@ export const ProvidersPage = () => {
                 providerToEdit={editingProvider}
                 />
             )}
+
+            {/* 6. MODAL DE CONFIRMACIÓN DE ELIMINACIÓN */}
+            <ConfirmationModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={handleConfirmDelete}
+                title="¿Eliminar Proveedor?"
+                message="Estás a punto de eliminar este registro permanentemente. Esta acción no se puede deshacer."
+                confirmText="Sí, Eliminar"
+                variant="danger" // Hace que el botón sea ROJO y el ícono de ALERTA
+                isLoading={deleteMutation.isPending}
+            />
         </div>
     );
 };
