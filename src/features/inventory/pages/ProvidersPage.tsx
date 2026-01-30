@@ -13,6 +13,8 @@ import { CrudButtons, BtnCreate } from '../../../components/ui/CrudButtons';    
 import { IconRenderer } from '../../../components/ui/IconRenderer';
 import { Provider } from '../types';
 import { ProviderFormModal } from '../components/ProviderFormModal';
+import { useMutation, useQueryClient } from '@tanstack/react-query'; // Importar
+import { deleteProvider } from '../services/providerService'; // Importar servicio delete
 
 export const ProvidersPage = () => {
     // 1. Fetching de Datos
@@ -39,7 +41,29 @@ export const ProvidersPage = () => {
     }, [providers, searchTerm, selectedCityId, selectedStatusCode, cities]);
 
 
-// 4. Definición de Columnas Actualizada
+    const queryClient = useQueryClient();
+
+    // 1. MUTATION PARA ELIMINAR
+    const deleteMutation = useMutation({
+        mutationFn: deleteProvider,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['providers'] });
+            // toast.success("Proveedor eliminado");
+        },
+        onError: (error) => {
+            alert("No se pudo eliminar el proveedor. Puede que tenga registros asociados.");
+        }
+    });
+
+    // 2. FUNCIÓN MANEJADORA DE ELIMINACIÓN
+    const handleDelete = (id: number) => {
+        // Confirmación simple del navegador (luego podemos hacer un modal bonito)
+        if (window.confirm("¿Estás seguro de eliminar este proveedor? Esta acción no se puede deshacer.")) {
+            deleteMutation.mutate(id);
+        }
+    };
+    
+    // 4. Definición de Columnas Actualizada
     const columns: Column<Provider>[] = [
         { 
             header: 'Proveedor', 
@@ -92,8 +116,13 @@ export const ProvidersPage = () => {
             className: 'w-24 text-right', 
             render: (row) => (
                 <CrudButtons 
-                    onEdit={() => console.log('Edit', row.id)}
-                    onDelete={() => console.log('Delete', row.id)}
+                    // CONECTAMOS EDITAR
+                    onEdit={() => {
+                        setEditingProvider(row); // Cargamos el proveedor clickeado
+                        setIsModalOpen(true);    // Abrimos modal
+                    }}
+                    // CONECTAMOS ELIMINAR
+                    onDelete={() => handleDelete(row.id)}
                 />
             )
         }

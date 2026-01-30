@@ -4,14 +4,24 @@ export interface Provider {
     id: number;
     name: string;
     address: string;
+    
+    // Datos para mostrar (Lectura)
+    statusName: string;
+    cityName: string;
     contactFullName: string;
+    
+    // Datos para lógica/edición (Escritura)
+    statusCode: number;
+    cityId: string; // Ojo: En tu JSON viene como string "3"
+    
+    // Nuevos campos desglosados
+    contactFirstName: string;
+    contactPaternalSurname: string | null; // Puede venir null
+    contactMaternalSurname: string | null; // Puede venir null
+    contactIdentityCard: string | null;    // Puede venir null
     contactPhoneNumber: number;
     contactEmail: string | null;
-    contactIdentityCard: string | null;
     imageUrl: string | null;
-    statusName: string;
-    statusCode: number; // 121, 122, etc.
-    cityName: string;
 }
 
 export interface City {

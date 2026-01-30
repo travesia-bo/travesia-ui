@@ -36,7 +36,6 @@ export const BtnEdit = (props: BaseBtnProps) => (
         variant="edit" 
         isIconOnly 
         icon={<Pencil size={16} />} 
-        tooltip="Editar registro"
         {...props} 
     />
 );
@@ -47,7 +46,6 @@ export const BtnDeleteIcon = (props: BaseBtnProps) => (
         variant="delete" 
         isIconOnly 
         icon={<Trash2 size={16} />} 
-        tooltip="Eliminar registro"
         {...props} 
     />
 );

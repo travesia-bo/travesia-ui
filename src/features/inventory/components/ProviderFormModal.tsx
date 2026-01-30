@@ -141,6 +141,56 @@ export const ProviderFormModal = ({ isOpen, onClose, providerToEdit }: Props) =>
         }
     });// ... (useForm hook igual) ...
 
+    // NUEVO ESTADO: Para forzar el shake manualmente en el paso 1
+    const [manualShake, setManualShake] = useState(0);
+    // 3. EFECTO DE PRE-CARGA DE DATOS (Actualizado)
+    useEffect(() => {
+        if (isOpen) {
+            setCurrentStep(1);
+            setManualShake(0);
+
+            if (providerToEdit) {
+                // === MODO EDICIÓN: Mapeo Directo y Seguro ===
+                // Ya no necesitamos adivinar con .split(), el backend nos da todo
+                
+                reset({
+                    // Datos Persona (Manejo de nulls con || "")
+                    contactFirstName: providerToEdit.contactFirstName,
+                    contactPaternalSurname: providerToEdit.contactPaternalSurname || "", 
+                    contactMaternalSurname: providerToEdit.contactMaternalSurname || "", 
+                    contactIdentityCard: providerToEdit.contactIdentityCard || "", 
+                    contactPhoneNumber: providerToEdit.contactPhoneNumber,
+                    contactEmail: providerToEdit.contactEmail || "",
+                    
+                    // Datos Empresa
+                    name: providerToEdit.name,
+                    address: providerToEdit.address,
+                    
+                    // Selects: Aseguramos que sean string para que el <select> lo detecte
+                    cityId: providerToEdit.cityId.toString(), 
+                    statusType: providerToEdit.statusCode.toString(), 
+                });
+            } else {
+                // === MODO CREAR (Limpiar todo) ===
+                reset({
+                    contactFirstName: "", 
+                    contactPaternalSurname: "", 
+                    contactMaternalSurname: "", 
+                    contactIdentityCard: "",
+                    contactPhoneNumber: undefined, 
+                    contactEmail: "", 
+                    
+                    name: "", 
+                    address: "", 
+                    cityId: "", 
+                    statusType: ""
+                });
+            }
+        }
+    }, [isOpen, providerToEdit, reset]);
+
+    // ... (handleNextStep, handlePrevStep igual) ...
+
     const onSubmit = async (data: ProviderFormData) => {
         // Transformación de datos (String -> Number)
         const payload = {
@@ -158,9 +208,6 @@ export const ProviderFormModal = ({ isOpen, onClose, providerToEdit }: Props) =>
         // 5. EJECUTAR LA MUTATION
         mutation.mutate(payload); 
     };
-
-    // NUEVO ESTADO: Para forzar el shake manualmente en el paso 1
-    const [manualShake, setManualShake] = useState(0);
 
     return (
         <TravesiaModal
