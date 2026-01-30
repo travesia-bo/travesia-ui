@@ -8,6 +8,7 @@ import { UnderConstruction } from "../components/ui/UnderConstruction";
 import { ProvidersPage } from "../features/inventory/pages/ProvidersPage"; 
 import { useTheme } from "../hooks/useTheme"; 
 import { ProductsPage } from "../features/inventory/pages/ProductsPage";
+import { PackagesPage } from "../features/commercial/pages/PackagesPage";
 
 export const AppRouter = () => {
   useTheme(); 
@@ -28,6 +29,7 @@ export const AppRouter = () => {
                 {/* Aquí registramos la nueva pantalla de Proveedores */}
                 <Route path="/commercial/providers" element={<ProvidersPage />} />
                 <Route path="/commercial/products" element={<ProductsPage />} />
+                <Route path="/commercial/packages" element={<PackagesPage />} />
                 
                 {/* Futuras rutas de inventario */}
                 {/* <Route path="/inventory/products" element={<ProductListPage />} /> */}
