@@ -7,6 +7,7 @@ import { UnderConstruction } from "../components/ui/UnderConstruction";
 // Importamos la nueva página
 import { ProvidersPage } from "../features/inventory/pages/ProvidersPage"; 
 import { useTheme } from "../hooks/useTheme"; 
+import { ProductsPage } from "../features/inventory/pages/ProductsPage";
 
 export const AppRouter = () => {
   useTheme(); 
@@ -26,6 +27,7 @@ export const AppRouter = () => {
                 {/* --- MÓDULO INVENTARIO --- */}
                 {/* Aquí registramos la nueva pantalla de Proveedores */}
                 <Route path="/commercial/providers" element={<ProvidersPage />} />
+                <Route path="/commercial/products" element={<ProductsPage />} />
                 
                 {/* Futuras rutas de inventario */}
                 {/* <Route path="/inventory/products" element={<ProductListPage />} /> */}
