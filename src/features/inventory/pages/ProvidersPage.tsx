@@ -16,8 +16,10 @@ import { ProviderFormModal } from '../components/ProviderFormModal';
 import { useMutation, useQueryClient } from '@tanstack/react-query'; // Importar
 import { deleteProvider } from '../services/providerService'; // Importar servicio delete
 import { ConfirmationModal } from '../../../components/ui/ConfirmationModal'; // 1. IMPORTAR
+import { useToast } from '../../../context/ToastContext';
 
 export const ProvidersPage = () => {
+    const { success, error: toastError } = useToast();
     // 1. Fetching de Datos
     const { data: providers = [], isLoading: loadingProviders } = useProviders();
     const { data: cities = [], isLoading: loadingCities } = useCities();
@@ -53,10 +55,11 @@ export const ProvidersPage = () => {
             queryClient.invalidateQueries({ queryKey: ['providers'] });
             setIsDeleteModalOpen(false); // Cerrar modal al terminar
             setProviderToDeleteId(null);
+            success("El proveedor ha sido eliminado.");
         },
         onError: () => {
             setIsDeleteModalOpen(false); // Cerrar también en error (o mostrar otro alert)
-            alert("Error al eliminar");
+            toastError("Error al eliminar. Verifique si tiene dependencias.");
         }
     });
 

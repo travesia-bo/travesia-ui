@@ -15,6 +15,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"; // 1. IMPOR
 import { createProvider, updateProvider } from "../services/providerService"; // 2. IMPORTAR SERVICIOS
 import { toast } from "sonner"; // Opcional: Para notificaciones bonitas (o usa alert)
 import { BtnSave, BtnCancel, BtnBack, BtnNext } from "../../../components/ui/CrudButtons";
+import { useToast } from "../../../context/ToastContext";
 
 // 1. ESQUEMA DE VALIDACIÓN (DTO Backend)
 const providerSchema = z.object({
@@ -44,6 +45,7 @@ interface Props {
 
 export const ProviderFormModal = ({ isOpen, onClose, providerToEdit }: Props) => {
     // Hooks de datos
+    const { success, error: toastError } = useToast();
     const { data: cities = [], isLoading: loadingCities } = useCities();
     const { parameters: statuses, isLoading: loadingStatuses } = useParameters(PARAM_CATEGORIES.PROVIDER_STATUS);
 
@@ -128,7 +130,8 @@ export const ProviderFormModal = ({ isOpen, onClose, providerToEdit }: Props) =>
         onSuccess: () => {
             // A) Refrescar la lista de proveedores automáticamente
             queryClient.invalidateQueries({ queryKey: ['providers'] });
-            
+            const action = providerToEdit ? "actualizado" : "creado";
+            success(`Proveedor ${action} correctamente.`);
             // B) Cerrar modal y notificar
             // toast.success("Proveedor guardado correctamente");
             console.log("✅ Guardado con éxito");
@@ -137,7 +140,8 @@ export const ProviderFormModal = ({ isOpen, onClose, providerToEdit }: Props) =>
         onError: (error: any) => {
             console.error("Error al guardar:", error);
             // toast.error("Error al guardar proveedor");
-            alert("Error al guardar: " + (error.response?.data?.message || "Error desconocido"));
+            toastError("No se pudo guardar el proveedor. Intente nuevamente.");
+            console.log("Error al guardar: " + (error.response?.data?.message || "Error desconocido"));
         }
     });// ... (useForm hook igual) ...
 
