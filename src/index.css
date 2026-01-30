@@ -111,4 +111,57 @@
     color: white !important;
   }
   .btn-travesia-create:hover { background-color: #14532d !important; }
+  
+  /* Botón CREATE (Morado) */
+  .btn-travesia-steps {
+    background-color: #432ad5 !important; /* violet-600 */
+    border-color: #432ad5 !important;
+    color: white !important;
+  }
+  .btn-travesia-steps:hover { background-color: #3d1eed !important; }
+
+  /* Animación de error (Shake) */
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+
+  .animate-shake {
+    animation: shake 0.3s ease-in-out;
+  }
+
+  /* ... tus otras animaciones ... */
+
+/* FIX VISUAL STEPPER: */
+/* Elimina forzosamente la línea que aparece a la izquierda del primer paso */
+.steps .step:first-child:before {
+  content: none !important;
+  display: none !important;
+}
+
+/* Ajuste para que la barra ocupe todo el ancho correctamente */
+.steps {
+  grid-auto-columns: 1fr; 
+}
+
+/* ... tus otras reglas ... */
+
+/* FIX STEPPER NUMBERS: */
+/* Obliga al círculo (::after) a leer el atributo data-content que pusimos en el HTML */
+.step:after {
+  content: attr(data-content) !important;
+  font-weight: bold;
+}
+
+/* Opcional: Asegura que el texto sea blanco si el paso está activo (morado) */
+.step-primary:after {
+  color: white !important;
+}
+
+/* Y asegúrate de mantener el fix anterior de la línea izquierda */
+.steps .step:first-child:before {
+  content: none !important;
+  display: none !important;
+}
 }

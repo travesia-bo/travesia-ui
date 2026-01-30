@@ -5,32 +5,37 @@ interface Props extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
   icon?: string;
+  isRequired?: boolean; // NUEVA PROPIEDAD
+  shakeKey?: number; // NUEVA PROP
 }
 
-export const TravesiaInput = ({ label, error, icon, className = "", ...props }: Props) => {
+export const TravesiaInput = ({ label, error, icon, isRequired, shakeKey, className = "", ...props }: Props) => {
   return (
-    <div className="form-control w-full">
+    <div 
+      key={error && shakeKey ? `err-${shakeKey}` : undefined}
+      className={`form-control w-full ${error ? "animate-shake" : ""}`}
+    >
       {label && (
         <label className="label">
-          <span className={`label-text font-semibold ${error ? "text-error" : ""}`}>
+          <span className={`label-text font-semibold flex gap-1 ${error ? "text-error" : ""}`}>
               {label}
+              {/* Indicador visual de requerido */}
+              {isRequired && <span className="text-error" title="Campo obligatorio">*</span>}
           </span>
         </label>
       )}
       
       <div className="relative">
-        {/* 1. EL INPUT VA PRIMERO (Fondo) */}
         <input
           className={`
             input input-bordered w-full 
-            ${error ? "input-error" : ""} 
+            ${error ? "input-error bg-error/5" : ""} 
             ${icon ? "pl-10" : ""} 
             ${className}
           `}
           {...props}
         />
 
-        {/* 2. EL ICONO VA DESPUÉS (Para que flote ENCIMA del input) */}
         {icon && (
           <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-base-content/50">
              <IconRenderer iconName={icon} size={18} />
@@ -40,7 +45,7 @@ export const TravesiaInput = ({ label, error, icon, className = "", ...props }: 
       
       {error && (
         <label className="label">
-          <span className="label-text-alt text-error">{error}</span>
+          <span className="label-text-alt text-error font-medium">{error}</span>
         </label>
       )}
     </div>

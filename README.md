@@ -109,3 +109,4 @@ npm install lucide-react
 
 # para manejar os estados en memoria
 npm install @tanstack/react-query
+npm install react-hook-form zod @hookform/resolvers

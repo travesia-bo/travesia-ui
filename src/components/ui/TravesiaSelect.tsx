@@ -12,33 +12,35 @@ interface Props extends React.SelectHTMLAttributes<HTMLSelectElement> {
   placeholder?: string;
   isLoading?: boolean;
   enableDefaultOption?: boolean; // 1. NUEVA PROPIEDAD
+  isRequired?: boolean;
+  shakeKey?: number; // NUEVA PROP
 }
 
 export const TravesiaSelect = ({ 
-    label, 
-    options, 
-    error, 
-    isLoading, 
+    label, options, error, isLoading, isRequired, shakeKey,
     placeholder = "Seleccione...", 
-    enableDefaultOption = false, // Por defecto sigue bloqueada (para formularios)
+    enableDefaultOption = false,
     ...props 
 }: Props) => {
   return (
-    <div className="form-control w-full">
+    <div 
+      key={error && shakeKey ? `err-${shakeKey}` : undefined}
+      className={`form-control w-full ${error ? "animate-shake" : ""}`}
+    >
       <label className="label">
-        <span className={`label-text font-semibold ${error ? "text-error" : ""}`}>{label}</span>
+        <span className={`label-text font-semibold flex gap-1 ${error ? "text-error" : ""}`}>
+            {label}
+            {isRequired && <span className="text-error">*</span>}
+        </span>
       </label>
       
       <select 
-        className={`select select-bordered w-full ${error ? "select-error" : ""}`} 
+        className={`select select-bordered w-full ${error ? "select-error bg-error/5" : ""}`} 
         disabled={isLoading}
         {...props}
       >
-        {/* 2. LÓGICA CORREGIDA: Solo se deshabilita si NO permitimos default y NO está cargando */}
-        <option 
-            disabled={isLoading || !enableDefaultOption} 
-            value=""
-        >
+        {/* ... lógica de opciones (mantenla igual) ... */}
+         <option disabled={isLoading || !enableDefaultOption} value="">
             {isLoading ? "Cargando datos..." : placeholder}
         </option>
         
@@ -51,7 +53,7 @@ export const TravesiaSelect = ({
 
       {error && (
         <label className="label">
-          <span className="label-text-alt text-error">{error}</span>
+          <span className="label-text-alt text-error font-medium">{error}</span>
         </label>
       )}
     </div>

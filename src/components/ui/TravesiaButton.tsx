@@ -5,7 +5,7 @@ type ButtonVariant =
   | "primary" | "secondary" | "neutral" | "ghost" 
   | "save" | "delete" | "cancel" | "edit" // CRUD Básico
   | "excel" | "pdf" // Reportes
-  | "success" | "error" | "warning" | "info" | "create"; 
+  | "success" | "error" | "warning" | "info" | "create" | "steps"; 
 
 interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   label?: string; // Ahora es opcional (porque los botones redondos no llevan texto)
@@ -15,6 +15,7 @@ interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   fullWidth?: boolean;
   isIconOnly?: boolean; // Nueva prop para hacerlos redondos
   tooltip?: string; // Útil para botones sin texto
+  responsive?: boolean; // <--- 1. NUEVA PROPIEDAD
 }
 
 export const TravesiaButton = ({ 
@@ -26,6 +27,7 @@ export const TravesiaButton = ({
   isIconOnly = false,
   className = "",
   tooltip,
+  responsive = false, // Por defecto es falso (comportamiento normal)
   ...props 
 }: Props) => {
 
@@ -41,6 +43,7 @@ export const TravesiaButton = ({
       case "pdf": return "btn-travesia-pdf border-none";
       case "create": return "btn-travesia-create border-none";
       
+      case "steps": return "btn-travesia-steps border-none";
       // Defaults de DaisyUI
       case "neutral": return "btn-neutral text-white";
       case "ghost": return "btn-travesia-ghost text-white"; 
@@ -54,7 +57,10 @@ export const TravesiaButton = ({
         btn 
         ${getVariantClass()} 
         ${fullWidth ? "w-full" : ""}
-        ${isIconOnly ? "btn-circle btn-sm md:btn-md" : "min-w-[120px] gap-2"} 
+        ${isIconOnly 
+            ? "btn-circle btn-sm md:btn-md" 
+            : "px-4 min-w-[100px] sm:min-w-[120px] gap-2" 
+        }
         shadow-sm hover:shadow-md transition-all
         ${className}
       `} 
@@ -62,7 +68,11 @@ export const TravesiaButton = ({
       {...props}
     >
       {isLoading ? <span className="loading loading-spinner"></span> : icon}
-      {!isIconOnly && label}
+      {!isIconOnly && label && (
+          <span className={responsive ? "hidden sm:inline" : ""}>
+            {label}
+          </span>
+      )}
     </button>
   );
 

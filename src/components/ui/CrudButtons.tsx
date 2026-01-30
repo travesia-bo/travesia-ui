@@ -1,28 +1,31 @@
-import { Save, X, Trash2, Pencil, FileSpreadsheet, FileText, Plus } from "lucide-react";
+import { Save, X, Trash2, Pencil, FileSpreadsheet, FileText, Plus, ArrowLeft, ArrowRight } from "lucide-react";
 import { TravesiaButton } from "./TravesiaButton";
 
 // Tipos para pasar props extra (como onClick)
 interface BaseBtnProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     isLoading?: boolean;
     label?: string; // Por si quieres sobreescribir el texto por defecto
+    responsive?: boolean
 }
 
 // 1. BOTÓN GUARDAR (Verde + Icono Save)
-export const BtnSave = ({ label = "Guardar", ...props }: BaseBtnProps) => (
+export const BtnSave = ({ label = "Guardar", responsive = true, ...props }: BaseBtnProps) => (
     <TravesiaButton 
         variant="save" 
         label={label} 
         icon={<Save size={18} />} 
+        responsive={responsive}
         {...props} 
     />
 );
 
 // 2. BOTÓN CANCELAR (Rojo + Icono X)
-export const BtnCancel = ({ label = "Cancelar", ...props }: BaseBtnProps) => (
+export const BtnCancel = ({ label = "Cancelar", responsive = true, ...props }: BaseBtnProps) => (
     <TravesiaButton 
         variant="cancel" 
         label={label} 
         icon={<X size={18} />} 
+        responsive={responsive}
         {...props} 
     />
 );
@@ -51,40 +54,44 @@ export const BtnDeleteIcon = (props: BaseBtnProps) => (
 
 
 // 5. BOTÓN ELIMINAR NORMAL (Con texto, para confirmaciones)
-export const BtnDelete = ({ label = "Eliminar", ...props }: BaseBtnProps) => (
+export const BtnDelete = ({ label = "Eliminar", responsive = true, ...props }: BaseBtnProps) => (
     <TravesiaButton 
         variant="delete" 
         label={label}
         icon={<Trash2 size={18} />} 
+        responsive={responsive}
         {...props} 
     />
 );
 
 // 6. REPORTES
-export const BtnExcel = ({ label = "Exportar Excel", ...props }: BaseBtnProps) => (
+export const BtnExcel = ({ label = "Exportar Excel", responsive = true, ...props }: BaseBtnProps) => (
     <TravesiaButton 
         variant="excel" 
         label={label}
         icon={<FileSpreadsheet size={18} />} 
+        responsive={responsive}
         {...props} 
     />
 );
 
-export const BtnPDF = ({ label = "Exportar PDF", ...props }: BaseBtnProps) => (
+export const BtnPDF = ({ label = "Exportar PDF", responsive = true, ...props }: BaseBtnProps) => (
     <TravesiaButton 
         variant="pdf" 
         label={label}
         icon={<FileText size={18} />} 
+        responsive={responsive}
         {...props} 
     />
 );
 
 // 7. TABLAS
-export const BtnCreate = ({ label = "Adicionar", ...props }: BaseBtnProps) => (
+export const BtnCreate = ({ label = "Adicionar", responsive = false, ...props }: BaseBtnProps) => (
     <TravesiaButton 
         variant="create" 
         label={label}
         icon={<Plus size={18} />} 
+        responsive={responsive}
         {...props} 
     />
 );
@@ -121,6 +128,31 @@ export const BtnModalNo = ({ label = "No, Cancelar", ...props }: BaseBtnProps) =
         label={label}
         icon={null} // Sin ícono de X
         className="border border-base-300" // Un borde sutil para que parezca botón
+        {...props} 
+    />
+);
+
+// 13. BOTÓN ATRÁS (Ghost + Flecha Izquierda) - Para Wizards
+export const BtnBack = ({ label = "Atrás", responsive = true, ...props }: BaseBtnProps) => (
+    <TravesiaButton 
+        variant="steps" 
+        label={label} 
+        responsive={responsive}
+        icon={<ArrowLeft size={18} />} 
+        {...props} 
+    />
+);
+
+// 14. BOTÓN SIGUIENTE (Primario + Flecha Derecha) - Para Wizards
+export const BtnNext = ({ label = "Siguiente", responsive = true, ...props }: BaseBtnProps) => (
+    <TravesiaButton 
+        variant="steps" 
+        label={label} 
+        responsive={responsive}
+        // Nota: Por defecto el icono va a la izquierda. 
+        // Si quisieras el icono a la derecha, tendrías que ajustar TravesiaButton, 
+        // pero por consistencia lo dejaremos a la izquierda como el resto del sistema.
+        icon={<ArrowRight size={18} />} 
         {...props} 
     />
 );

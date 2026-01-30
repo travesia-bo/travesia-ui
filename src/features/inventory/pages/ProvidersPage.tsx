@@ -12,6 +12,7 @@ import { TravesiaButton } from '../../../components/ui/TravesiaButton';     // A
 import { CrudButtons, BtnCreate } from '../../../components/ui/CrudButtons';           // ¡Ahora sí existe!
 import { IconRenderer } from '../../../components/ui/IconRenderer';
 import { Provider } from '../types';
+import { ProviderFormModal } from '../components/ProviderFormModal';
 
 export const ProvidersPage = () => {
     // 1. Fetching de Datos
@@ -98,6 +99,16 @@ export const ProvidersPage = () => {
         }
     ];
 
+    // ... estados ...
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingProvider, setEditingProvider] = useState<Provider | null>(null);
+
+    // ✅ ESTA ES LA FUNCIÓN CLAVE
+    const handleCreate = () => {
+        setEditingProvider(null); // NULL indica "Modo Crear"
+        setIsModalOpen(true);     // Abre el Modal
+    };
+
     return (
         <div className="p-6 space-y-6 animate-fade-in">
             {/* Header */}
@@ -107,7 +118,7 @@ export const ProvidersPage = () => {
                     <p className="text-sm text-base-content/60">Gestión de hoteles, alojamientos y servicios.</p>
                 </div>
                 <BtnCreate 
-                    onClick={() => console.log("Abrir modal create")} 
+                    onClick={handleCreate}
                 />
             </div>
 
@@ -154,6 +165,15 @@ export const ProvidersPage = () => {
                 columns={columns} 
                 isLoading={loadingProviders} 
             />
+        
+        
+            {isModalOpen && (
+                <ProviderFormModal 
+                isOpen={isModalOpen} 
+                onClose={() => setIsModalOpen(false)} 
+                providerToEdit={editingProvider}
+                />
+            )}
         </div>
     );
 };
