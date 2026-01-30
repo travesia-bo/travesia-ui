@@ -198,6 +198,29 @@
 }
 
 
+/* SCROLLBAR INVISIBLE / DELGADO */
+@layer utilities {
+  /* Opción 1: Ocultar totalmente (Recomendado para Sidebar) */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
 
+  /* Opción 2: Muy delgado y sutil (Para contenidos) */
+  .thin-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .thin-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .thin-scrollbar::-webkit-scrollbar-thumb {
+    background-color: oklch(var(--bc) / 0.2);
+    border-radius: 20px;
+  }
+}
 
 }
