@@ -23,7 +23,54 @@ const MenuItemRenderer = ({ item, isCollapsed }: { item: MenuItem, isCollapsed: 
     const activeLinkClass = "bg-primary/10 text-primary font-bold";
     const inactiveLinkClass = "text-base-content/70 hover:bg-base-200 hover:text-base-content";
 
+// ---------------------------------------------------------
+    // CASO A: TIENE HIJOS (ES UN PADRE/GRUPO)
+    // ---------------------------------------------------------
     if (hasChildren) {
+        
+        // --- 1. MODO COLAPSADO (PC): Usamos Dropdown Flotante ---
+        // ESTA ES LA PARTE QUE FALTABA EN TU ARCHIVO
+        if (isCollapsed) {
+            return (
+                <li className="mb-1 flex justify-center">
+                    {/* 'dropdown-hover' muestra el menú al pasar el mouse. 'dropdown-right' lo saca al lado. */}
+                    <div className="dropdown dropdown-hover dropdown-right">
+                        
+                        {/* TRIGGER: Solo el icono del padre */}
+                        <div 
+                            tabIndex={0} 
+                            role="button" 
+                            className={`
+                                btn btn-ghost btn-circle
+                                ${isActiveParent ? 'text-primary bg-primary/10' : 'text-base-content/70'}
+                            `}
+                        >
+                            <IconRenderer iconName={item.icon} size={22} />
+                        </div>
+
+                        {/* CONTENIDO FLOTANTE: Lista de Submenús */}
+                        <ul tabIndex={0} className="dropdown-content z-[999] menu p-2 shadow-xl bg-base-100 rounded-box w-56 ml-2 border border-base-200">
+                            {/* Título del Grupo */}
+                            <li className="menu-title px-4 py-2 text-primary border-b border-base-200 mb-1">
+                                {item.name}
+                            </li>
+                            
+                            {/* Lista de Hijos: Usamos recursividad con isCollapsed={false} 
+                                para que se vean completos (Icono + Texto) dentro de la burbuja */}
+                            {item.children!.map((child) => (
+                                <MenuItemRenderer 
+                                    key={child.id} 
+                                    item={child} 
+                                    isCollapsed={false} 
+                                />
+                            ))}
+                        </ul>
+                    </div>
+                </li>
+            );
+        }
+
+        // --- 2. MODO EXPANDIDO: Usamos Acordeón (Details) ---
         return (
             <li className="mb-1">
                 <details open={isActiveParent} className="group">
@@ -34,46 +81,59 @@ const MenuItemRenderer = ({ item, isCollapsed }: { item: MenuItem, isCollapsed: 
                     `}>
                         <div className="flex items-center gap-3">
                             <IconRenderer iconName={item.icon} size={20} />
-                            {/* Ocultar texto si está colapsado */}
-                            {!isCollapsed && <span>{item.name}</span>}
+                            <span>{item.name}</span>
                         </div>
+                        
                     </summary>
                     
-                    {/* Ocultar hijos si está colapsado el padre visualmente */}
-                    {!isCollapsed && (
-                        <ul className="pl-4 mt-1 border-l-2 border-base-200 ml-6 space-y-1">
-                            {item.children!.map((child) => (
-                                <MenuItemRenderer key={child.id} item={child} isCollapsed={isCollapsed} />
-                            ))}
-                        </ul>
-                    )}
+                    {/* Lista de hijos (Acordeón) */}
+                    <ul className="pl-4 mt-1 border-l-2 border-base-200 ml-6 space-y-1 animate-fade-in">
+                        {item.children!.map((child) => (
+                            <MenuItemRenderer key={child.id} item={child} isCollapsed={isCollapsed} />
+                        ))}
+                    </ul>
                 </details>
             </li>
         );
     }
 
+    // ---------------------------------------------------------
+    // CASO B: ENLACE DIRECTO (SIN HIJOS)
+    // ---------------------------------------------------------
     return (
         <li className="mb-1">
-            <NavLink 
-                to={item.route || "#"}
-                className={({ isActive }) => `
-                    ${baseLinkClass}
-                    ${isActive ? activeLinkClass : inactiveLinkClass}
-                `}
-                title={isCollapsed ? item.name : ""} // Tooltip nativo cuando está cerrado
-            >
-                <IconRenderer iconName={item.icon} size={20} />
-                
-                {/* Ocultar texto y puntito si está colapsado */}
-                {!isCollapsed && (
-                    <>
-                        <span>{item.name}</span>
-                        {isActiveLink && (
-                            <span className="ml-auto w-2 h-2 rounded-full bg-primary shadow-lg shadow-primary/50"></span>
-                        )}
-                    </>
-                )}
-            </NavLink>
+            {isCollapsed ? (
+                // Colapsado: Tooltip + Icono
+                <div 
+                    className="tooltip tooltip-right w-full flex justify-center z-50" 
+                    data-tip={item.name}
+                >
+                    <NavLink 
+                        to={item.route || "#"}
+                        className={({ isActive }) => `
+                            btn btn-ghost btn-circle
+                            ${isActive ? 'text-primary bg-primary/10' : 'text-base-content/70'}
+                        `}
+                    >
+                        <IconRenderer iconName={item.icon} size={22} />
+                    </NavLink>
+                </div>
+            ) : (
+                // Expandido: Icono + Texto + Indicador Activo
+                <NavLink 
+                    to={item.route || "#"}
+                    className={({ isActive }) => `
+                        ${baseLinkClass}
+                        ${isActive ? activeLinkClass : inactiveLinkClass}
+                    `}
+                >
+                    <IconRenderer iconName={item.icon} size={20} />
+                    <span>{item.name}</span>
+                    {isActiveLink && (
+                        <span className="ml-auto w-2 h-2 rounded-full bg-primary shadow-lg shadow-primary/50"></span>
+                    )}
+                </NavLink>
+            )}
         </li>
     );
 };
