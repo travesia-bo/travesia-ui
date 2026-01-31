@@ -14,6 +14,8 @@ import { useToast } from "../../../context/ToastContext";
 // UI Components
 import { TravesiaModal } from "../../../components/ui/TravesiaModal";
 import { TravesiaInput } from "../../../components/ui/TravesiaInput";
+import { TravesiaTextarea } from "../../../components/ui/TravesiaTextarea"; // ✅ Tu componente nuevo
+import { TravesiaStepper } from "../../../components/ui/TravesiaStepper";   // ✅ El componente Stepper
 import { RichSelect } from "../../../components/ui/RichSelect";
 import { BtnSave, BtnCancel, BtnNext, BtnBack } from "../../../components/ui/CrudButtons";
 import { TravesiaBadge } from "../../../components/ui/TravesiaBadge";
@@ -21,7 +23,6 @@ import { TravesiaBadge } from "../../../components/ui/TravesiaBadge";
 // Types
 import { CreatePackageRequest, Package } from "../types";
 import { Product } from "../../inventory/types";
-import { TravesiaTextarea } from "../../../components/ui/TravesiaTextarea";
 
 interface Props {
     isOpen: boolean;
@@ -34,6 +35,9 @@ interface SelectedProductItem {
     quantity: number;
 }
 
+// ✅ DEFINIMOS LOS PASOS AQUÍ (Configurable: Si quieres 3, agregas uno más al array)
+const FORM_STEPS = ["Información General", "Composición y Precios"];
+
 export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
     const { success, error: toastError } = useToast();
     const queryClient = useQueryClient();
@@ -43,8 +47,6 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
     // Estados Locales
     const [currentStep, setCurrentStep] = useState(1);
     const [selectedItems, setSelectedItems] = useState<SelectedProductItem[]>([]);
-    
-    // ✅ CORRECCIÓN SHAKE: Estado para forzar la animación
     const [manualShake, setManualShake] = useState(0); 
 
     // Formulario
@@ -55,7 +57,7 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
         watch, 
         reset, 
         trigger, 
-        formState: { errors, submitCount } // ✅ Importamos submitCount
+        formState: { errors, submitCount } 
     } = useForm<CreatePackageRequest>({
         defaultValues: {
             peopleCount: 1,
@@ -67,36 +69,23 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
     const watchedPeopleCount = watch("peopleCount");
     const watchedTotalPrice = watch("totalPrice");
 
-    // --- CÁLCULOS AUTOMÁTICOS ---
-
-    // 1. Costo Base (Suma dinámica)
+    // --- CÁLCULOS ---
     const baseCost = useMemo(() => {
-        return selectedItems.reduce((acc, item) => {
-            return acc + (item.product.providerCost * item.quantity);
-        }, 0);
+        return selectedItems.reduce((acc, item) => acc + (item.product.providerCost * item.quantity), 0);
     }, [selectedItems]);
 
-    // 2. Sincronización de Precios (CORREGIDO)
-    // Cada vez que cambia el Costo Base (por agregar, quitar o editar items), 
-    // actualizamos el Precio Total automáticamente para que coincida.
     useEffect(() => {
-        // Asignamos el costo base al precio total
         setValue("totalPrice", Number(baseCost.toFixed(2)));
-        
-        // Recalculamos precio por persona
         const count = Number(watchedPeopleCount) || 1;
         const perPerson = baseCost / count;
         setValue("pricePerPerson", Number(perPerson.toFixed(2)));
+    }, [baseCost, watchedPeopleCount, setValue]);
 
-    }, [baseCost, watchedPeopleCount, setValue]); 
-    // Nota: Al quitar 'watchedTotalPrice' de las dependencias, evitamos bucles si el usuario edita manual,
-    // pero si cambia los items, se reseteará al costo base (que es el comportamiento seguro deseado).
-
-    // --- CARGA DE DATOS (EDICIÓN) ---
+    // --- CARGA DE DATOS ---
     useEffect(() => {
         if (isOpen) {
             setCurrentStep(1);
-            setManualShake(0); // Reset shake
+            setManualShake(0);
             
             if (packageToEdit) {
                 setValue("name", packageToEdit.name);
@@ -109,15 +98,9 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
                 const reconstructedItems: SelectedProductItem[] = [];
                 packageToEdit.details.forEach(detail => {
                     const foundProd = availableProducts.find(p => p.id === detail.productId);
-                    if (foundProd) {
-                        reconstructedItems.push({
-                            product: foundProd,
-                            quantity: detail.quantity
-                        });
-                    }
+                    if (foundProd) reconstructedItems.push({ product: foundProd, quantity: detail.quantity });
                 });
                 setSelectedItems(reconstructedItems);
-
             } else {
                 reset({ peopleCount: 1, totalPrice: 0, pricePerPerson: 0 });
                 setSelectedItems([]);
@@ -125,24 +108,17 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
         }
     }, [isOpen, packageToEdit, reset, setValue, availableProducts]);
 
-    // --- MANEJO DE PRODUCTOS (SELECCIÓN AUTOMÁTICA) ---
-
-    // ✅ AHORA RECIBE EL ID Y AGREGA DIRECTAMENTE
+    // --- HANDLERS PRODUCTOS ---
     const handleAddProduct = (productIdStr: string | number) => {
         const productId = Number(productIdStr);
         const product = availableProducts.find(p => p.id === productId);
-        
         if (!product) return;
 
-        // Verificar si ya existe
         const exists = selectedItems.find(item => item.product.id === product.id);
-        
         if (exists) {
-            // Si existe, aumentamos cantidad +1 automáticamente
             handleUpdateQuantity(product.id, exists.quantity + 1);
             success(`Se agregó +1 a ${product.name}`);
         } else {
-            // Si no, agregamos nuevo a la lista
             setSelectedItems(prev => [...prev, { product, quantity: 1 }]);
         }
     };
@@ -152,26 +128,23 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
     };
 
     const handleUpdateQuantity = (productId: number, newQty: number) => {
-        if (newQty < 1) return; // No permitir 0 o negativos
+        if (newQty < 1) return;
         setSelectedItems(prev => prev.map(item => 
             item.product.id === productId ? { ...item, quantity: newQty } : item
         ));
     };
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            setValue("imageUrl", e.target.files[0].name);
-        }
+        if (e.target.files && e.target.files[0]) setValue("imageUrl", e.target.files[0].name);
     };
 
-    // --- LOGICA WIZARD CON SHAKE ---
+    // --- NAVEGACIÓN WIZARD ---
     const handleNext = async () => {
         const validStep1 = await trigger(["name", "peopleCount", "description"]);
         if (validStep1) {
             setCurrentStep(2);
-            setManualShake(0); // Reset al cambiar de paso
+            setManualShake(0);
         } else {
-            // ✅ CORRECCIÓN: Si falla, aumentamos el contador para forzar re-render de animación
             setManualShake(prev => prev + 1);
         }
     };
@@ -179,7 +152,7 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
     const mutation = useMutation({
         mutationFn: (data: CreatePackageRequest) => {
             if (selectedItems.length === 0) throw new Error("Debes agregar al menos un producto.");
-            if (Number(data.totalPrice) < baseCost) throw new Error(`El precio total no puede ser menor al costo base (Bs. ${baseCost})`);
+            if (Number(data.totalPrice) < baseCost) throw new Error(`El precio total no puede ser menor al costo base.`);
 
             const payload: CreatePackageRequest = {
                 ...data,
@@ -189,9 +162,7 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
                 }))
             };
 
-            return packageToEdit 
-                ? updatePackage(packageToEdit.id, payload) 
-                : createPackage(payload);
+            return packageToEdit ? updatePackage(packageToEdit.id, payload) : createPackage(payload);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["packages"] });
@@ -199,14 +170,10 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
             onClose();
         },
         onError: (err: any) => {
-            toastError(err.message || "Error al guardar el paquete.");
-            setManualShake(prev => prev + 1); // Shake si hay error de lógica
+            toastError(err.message || "Error al guardar.");
+            setManualShake(prev => prev + 1);
         }
     });
-
-    const onSubmit = (data: CreatePackageRequest) => {
-        mutation.mutate(data);
-    };
 
     // --- RENDERIZADO ---
     const modalTitle = (
@@ -215,9 +182,7 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
                 <Box size={20} className="text-primary"/>
                 {packageToEdit ? "Editar Paquete" : "Diseñar Nuevo Paquete"}
             </span>
-            <span className="text-xs font-normal text-base-content/60 ml-7">
-                {currentStep === 1 ? "Paso 1: Información General" : "Paso 2: Composición y Precios"}
-            </span>
+            {/* Subtítulo eliminado, ahora lo maneja el Stepper visualmente */}
         </div>
     );
 
@@ -232,8 +197,9 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
                     <BtnNext onClick={handleNext} />
                 ) : (
                     <BtnSave 
-                        onClick={handleSubmit(onSubmit)} 
+                        onClick={handleSubmit((data) => mutation.mutate(data))} 
                         isLoading={mutation.isPending} 
+                        label={packageToEdit ? "Guardar Cambios" : "Crear Paquete"}
                     />
                 )}
             </div>
@@ -248,6 +214,12 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
             actions={modalActions}
             size="xl"
         >
+            {/* ✅ AQUI ESTÁ EL COMPONENTE REUTILIZABLE */}
+            <TravesiaStepper 
+                steps={FORM_STEPS} 
+                currentStep={currentStep} 
+            />
+
             <form className="min-h-[400px]">
                 
                 {/* --- PASO 1 --- */}
@@ -259,18 +231,14 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
                                 placeholder="Ej: Paquete Fin de Semana Premium"
                                 {...register("name", { required: "Nombre requerido", maxLength: 200 })}
                                 error={errors.name?.message}
-                                // ✅ PASAMOS EL KEY COMBINADO PARA EL SHAKE
                                 shakeKey={submitCount + manualShake}
                             />
                             
-                            {/* ✅ AQUI EL CAMBIO: Usamos el componente reutilizable */}
-                            <TravesiaTextarea
+                            {/* Componente Textarea Reutilizable */}
+                            <TravesiaTextarea 
                                 label="Descripción"
                                 placeholder="Describe qué incluye este paquete..."
                                 {...register("description")}
-                                // Si quieres validación, la agregas aquí:
-                                // error={errors.description?.message} 
-                                // shakeKey={submitCount + manualShake}
                             />
 
                             <TravesiaInput
@@ -278,13 +246,13 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
                                 type="number"
                                 icon="users"
                                 placeholder="1"
-                                {...register("peopleCount", { required: "Requerido", min: { value: 1, message: "Mínimo 1" } })}
+                                {...register("peopleCount", { required: "Requerido", min: 1 })}
                                 error={errors.peopleCount?.message}
                                 shakeKey={submitCount + manualShake}
                             />
                         </div>
 
-                        {/* Imagen (Mantenido igual) */}
+                        {/* Imagen */}
                         <div className="space-y-4">
                              <div className="form-control">
                                 <label className="label"><span className="label-text font-medium flex gap-2"><FileImage size={16}/> Imagen de Portada</span></label>
@@ -315,7 +283,7 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
                 {/* --- PASO 2 --- */}
                 <div className={currentStep === 2 ? "block space-y-6 animate-fade-in" : "hidden"}>
                     
-                    {/* 1. SELECTOR AUTOMÁTICO (Sin botón +) */}
+                    {/* Selector */}
                     <div className="bg-base-200/50 p-4 rounded-xl border border-base-200">
                         <label className="label font-bold text-sm text-base-content/70">Agregar Productos al Paquete</label>
                         <RichSelect 
@@ -327,98 +295,170 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
                                 subtitle: `Stock: ${p.physicalStock} | Costo: Bs. ${p.providerCost}`,
                                 icon: <ShoppingCart size={16}/>
                             }))}
-                            // ✅ MODIFICADO: No value (para resetear visualmente) y onChange dispara la adición directa
                             value={null} 
                             onChange={(val) => handleAddProduct(val)}
                             isLoading={loadingProducts}
                         />
                     </div>
 
-                    {/* 2. TABLA INTERACTIVA */}
-                    <div className="overflow-hidden border border-base-300 rounded-xl">
-                        <table className="table table-sm w-full bg-base-100">
-                            <thead className="bg-base-200 text-base-content/70">
-                                <tr>
-                                    <th>Producto</th>
-                                    <th>Categoría</th>
-                                    <th className="text-center">Costo Unit.</th>
-                                    <th className="text-center w-32">Cantidad</th>
-                                    <th className="text-right">Subtotal</th>
-                                    <th className="w-10"></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {selectedItems.length === 0 ? (
+                    {/* Tabla (Igual que antes...) */}
+                    {/* 2. LISTA DE PRODUCTOS (RESPONSIVE) */}
+                    <div className="border border-base-300 rounded-xl overflow-hidden bg-base-100">
+                        
+                        {/* --- A. VISTA DE TABLA (SOLO PC - md:block) --- */}
+                        <div className="hidden md:block">
+                            <table className="table table-sm w-full">
+                                <thead className="bg-base-200 text-base-content/70">
                                     <tr>
-                                        <td colSpan={6} className="text-center py-8 text-base-content/40">
-                                            <div className="flex flex-col items-center gap-2">
-                                                <ShoppingCart size={32} />
-                                                <span>Selecciona productos arriba para empezar.</span>
-                                            </div>
-                                        </td>
+                                        <th>Producto</th>
+                                        <th>Categoría</th>
+                                        <th className="text-center">Costo Unit.</th>
+                                        <th className="text-center w-32">Cantidad</th>
+                                        <th className="text-right">Subtotal</th>
+                                        <th className="w-10"></th>
                                     </tr>
-                                ) : (
-                                    selectedItems.map((item) => (
-                                        <tr key={item.product.id} className="hover">
-                                            <td>
-                                                <div className="font-bold">{item.product.name}</div>
-                                                <div className="text-xs opacity-60 truncate max-w-[150px]">{item.product.description}</div>
-                                            </td>
-                                            <td>
-                                                <TravesiaBadge 
-                                                    label={item.product.categoryName} 
-                                                    code={item.product.categoryCode} 
-                                                    type="PRODUCT_CATEGORY"
-                                                />
-                                            </td>
-                                            <td className="text-center font-mono text-xs">Bs. {item.product.providerCost}</td>
-                                            <td>
-                                                <div className="flex items-center justify-center gap-2">
-                                                    <button 
-                                                        type="button" 
-                                                        className="btn btn-xs btn-circle btn-ghost border border-base-300 hover:bg-error/10 hover:text-error"
-                                                        onClick={() => {
-                                                            if(item.quantity === 1) handleRemoveProduct(item.product.id);
-                                                            else handleUpdateQuantity(item.product.id, item.quantity - 1);
-                                                        }}
-                                                    >-</button>
-                                                    <span className="font-bold w-6 text-center">{item.quantity}</span>
-                                                    <button 
-                                                        type="button" 
-                                                        className="btn btn-xs btn-circle btn-ghost border border-base-300 hover:bg-primary/10 hover:text-primary"
-                                                        onClick={() => handleUpdateQuantity(item.product.id, item.quantity + 1)}
-                                                    >+</button>
+                                </thead>
+                                <tbody>
+                                    {selectedItems.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={6} className="text-center py-8 text-base-content/40">
+                                                <div className="flex flex-col items-center gap-2">
+                                                    <ShoppingCart size={32} />
+                                                    <span>Selecciona productos arriba para empezar.</span>
                                                 </div>
                                             </td>
-                                            <td className="text-right font-mono font-bold">
-                                                Bs. {(item.product.providerCost * item.quantity).toFixed(2)}
-                                            </td>
-                                            <td className="text-center">
+                                        </tr>
+                                    ) : (
+                                        selectedItems.map((item) => (
+                                            <tr key={item.product.id} className="hover">
+                                                <td>
+                                                    <div className="font-bold">{item.product.name}</div>
+                                                    <div className="text-xs opacity-60 truncate max-w-[150px]">{item.product.description}</div>
+                                                </td>
+                                                <td>
+                                                    <TravesiaBadge 
+                                                        label={item.product.categoryName} 
+                                                        code={item.product.categoryCode} 
+                                                        type="PRODUCT_CATEGORY"
+                                                    />
+                                                </td>
+                                                <td className="text-center font-mono text-xs">Bs. {item.product.providerCost}</td>
+                                                <td>
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <button 
+                                                            type="button" 
+                                                            className="btn btn-xs btn-circle btn-ghost border border-base-300 hover:bg-error/10 hover:text-error"
+                                                            onClick={() => {
+                                                                if(item.quantity === 1) handleRemoveProduct(item.product.id);
+                                                                else handleUpdateQuantity(item.product.id, item.quantity - 1);
+                                                            }}
+                                                        >-</button>
+                                                        <span className="font-bold w-6 text-center">{item.quantity}</span>
+                                                        <button 
+                                                            type="button" 
+                                                            className="btn btn-xs btn-circle btn-ghost border border-base-300 hover:bg-primary/10 hover:text-primary"
+                                                            onClick={() => handleUpdateQuantity(item.product.id, item.quantity + 1)}
+                                                        >+</button>
+                                                    </div>
+                                                </td>
+                                                <td className="text-right font-mono font-bold">
+                                                    Bs. {(item.product.providerCost * item.quantity).toFixed(2)}
+                                                </td>
+                                                <td className="text-center">
+                                                    <button 
+                                                        type="button" 
+                                                        className="btn btn-ghost btn-xs text-error"
+                                                        onClick={() => handleRemoveProduct(item.product.id)}
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* --- B. VISTA DE TARJETAS (SOLO MÓVIL - md:hidden) --- */}
+                        <div className="md:hidden p-3 space-y-3 bg-base-200/30">
+                            {selectedItems.length === 0 ? (
+                                <div className="text-center py-8 text-base-content/40 bg-base-100 rounded-xl border border-dashed border-base-300">
+                                    <div className="flex flex-col items-center gap-2">
+                                        <ShoppingCart size={32} />
+                                        <span>Selecciona productos arriba.</span>
+                                    </div>
+                                </div>
+                            ) : (
+                                selectedItems.map((item) => (
+                                    <div key={item.product.id} className="bg-base-100 p-4 rounded-xl shadow-sm border border-base-200 relative">
+                                        
+                                        {/* Header Tarjeta: Nombre y Botón Borrar */}
+                                        <div className="flex justify-between items-start gap-3 mb-3">
+                                            <div>
+                                                <h4 className="font-bold text-sm text-base-content">{item.product.name}</h4>
+                                                <div className="flex flex-wrap gap-2 mt-1">
+                                                    <TravesiaBadge 
+                                                        label={item.product.categoryName} 
+                                                        code={item.product.categoryCode} 
+                                                        type="PRODUCT_CATEGORY"
+                                                        className="scale-75 origin-left" // Badge un poco más pequeño en móvil
+                                                    />
+                                                </div>
+                                            </div>
+                                            <button 
+                                                type="button" 
+                                                className="btn btn-sm btn-ghost btn-square text-error -mr-2 -mt-2"
+                                                onClick={() => handleRemoveProduct(item.product.id)}
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </div>
+
+                                        {/* Body Tarjeta: Controles y Precios */}
+                                        <div className="flex items-center justify-between bg-base-200/50 p-3 rounded-lg">
+                                            
+                                            {/* Control de Cantidad (Más grande para dedos) */}
+                                            <div className="flex items-center gap-3">
                                                 <button 
                                                     type="button" 
-                                                    className="btn btn-ghost btn-xs text-error"
-                                                    onClick={() => handleRemoveProduct(item.product.id)}
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                            {selectedItems.length > 0 && (
-                                <tfoot className="bg-base-200/50 font-bold">
-                                    <tr>
-                                        <td colSpan={4} className="text-right text-xs uppercase opacity-60">Costo Base (Proveedor):</td>
-                                        <td className="text-right text-base-content">Bs. {baseCost.toFixed(2)}</td>
-                                        <td></td>
-                                    </tr>
-                                </tfoot>
+                                                    className="btn btn-sm btn-circle bg-base-100 shadow-sm border-base-300"
+                                                    onClick={() => {
+                                                        if(item.quantity === 1) handleRemoveProduct(item.product.id);
+                                                        else handleUpdateQuantity(item.product.id, item.quantity - 1);
+                                                    }}
+                                                >-</button>
+                                                <span className="font-bold w-4 text-center">{item.quantity}</span>
+                                                <button 
+                                                    type="button" 
+                                                    className="btn btn-sm btn-circle btn-primary shadow-sm"
+                                                    onClick={() => handleUpdateQuantity(item.product.id, item.quantity + 1)}
+                                                >+</button>
+                                            </div>
+
+                                            {/* Subtotal */}
+                                            <div className="text-right">
+                                                <div className="text-[10px] opacity-60">Unit: {item.product.providerCost}</div>
+                                                <div className="font-mono font-bold text-primary">
+                                                    Bs. {(item.product.providerCost * item.quantity).toFixed(2)}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
                             )}
-                        </table>
+                        </div>
+
+                        {/* Footer Común (Costo Base Total) */}
+                        {selectedItems.length > 0 && (
+                            <div className="bg-base-200/80 p-3 flex justify-between items-center border-t border-base-300">
+                                <span className="text-xs font-bold uppercase opacity-60">Costo Base Total:</span>
+                                <span className="font-mono font-bold text-base-content">Bs. {baseCost.toFixed(2)}</span>
+                            </div>
+                        )}
                     </div>
 
-                    {/* 3. CALCULADORA */}
+                    {/* Calculadora (Igual que antes...) */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-base-200">
                         <div className="space-y-2">
                             <label className="flex items-center justify-between text-sm font-bold">
@@ -441,7 +481,7 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
                                     min: { value: baseCost, message: "No puedes perder dinero" } 
                                 })}
                             />
-                            <p className="text-xs opacity-60">Precio final para el cliente (debe ser mayor a Bs. {baseCost.toFixed(2)})</p>
+                            {/* <p className="text-xs opacity-60">Precio final para el cliente</p> */}
                         </div>
 
                         <div className="bg-base-200 p-4 rounded-xl flex flex-col justify-center items-end text-right border border-base-300">
@@ -450,9 +490,6 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
                             </span>
                             <span className="text-3xl font-mono font-black text-primary">
                                 Bs. {watch("pricePerPerson")?.toFixed(2) || "0.00"}
-                            </span>
-                            <span className="text-xs opacity-60 mt-1">
-                                (Bs. {watchedTotalPrice || 0} ÷ {watchedPeopleCount || 1} personas)
                             </span>
                         </div>
                     </div>
