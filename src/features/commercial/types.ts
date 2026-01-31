@@ -33,3 +33,18 @@ export interface PackageStatusUpdate {
 export interface PackageVisibilityUpdate {
     isPublic: boolean;
 }
+
+export interface PackageDetailItemRequest {
+    productId: number;
+    quantity: number;
+}
+
+export interface CreatePackageRequest {
+    name: string;
+    description?: string;
+    imageUrl?: string;
+    peopleCount: number;
+    totalPrice: number;
+    pricePerPerson: number;
+    packageDetails: PackageDetailItemRequest[];
+}

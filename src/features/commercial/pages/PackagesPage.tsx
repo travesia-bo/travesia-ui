@@ -14,8 +14,9 @@ import { TravesiaInput } from '../../../components/ui/TravesiaInput';
 import { TravesiaSelect } from '../../../components/ui/TravesiaSelect';
 import { CrudButtons, BtnCreate } from '../../../components/ui/CrudButtons';
 import { TravesiaSwitch } from '../../../components/ui/TravesiaSwitch';
-import { PackageDetailsModal } from '../components/PackageDetailsModal';
-import { ConfirmationModal } from '../../../components/ui/ConfirmationModal'; // Componente reutilizable
+import { PackageDetailsModal } from '../components/PackageDetailsModal'; // Modal de SOLO LECTURA
+import { PackageFormModal } from '../components/PackageFormModal';       // ✅ NUEVO: Modal de CREAR/EDITAR
+import { ConfirmationModal } from '../../../components/ui/ConfirmationModal';
 import { Eye, Users, Package as BoxIcon, Globe, Power } from 'lucide-react';
 import { useToast } from '../../../context/ToastContext';
 
@@ -45,20 +46,23 @@ export const PackagesPage = () => {
         });
     }, [packages, searchTerm, filterCategory, filterPeople]);
 
-    // 3. Estados de Modales (Visualización y Edición)
+    // 3. Estados de Modales
+    
+    // A. Modal de Detalles (Ojo)
     const [detailsModalOpen, setDetailsModalOpen] = useState(false);
-    const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
+    const [selectedPackageForDetails, setSelectedPackageForDetails] = useState<Package | null>(null);
     
-    // --- ESTADOS PARA MODALES DE CONFIRMACIÓN ---
-    const [packageToToggle, setPackageToToggle] = useState<Package | null>(null); // Paquete seleccionado para cambiar
-    
-    const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);      // Modal Activo/Inactivo
-    const [isVisibilityModalOpen, setIsVisibilityModalOpen] = useState(false); // Modal Público/Privado
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);      // Modal Eliminar
+    // B. Modal de Formulario (Crear/Editar) ✅
+    const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    const [editingPackage, setEditingPackage] = useState<Package | null>(null);
+
+    // C. Modales de Confirmación
+    const [packageToToggle, setPackageToToggle] = useState<Package | null>(null); 
+    const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);      
+    const [isVisibilityModalOpen, setIsVisibilityModalOpen] = useState(false); 
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);      
 
     // --- MUTATIONS ---
-
-    // A. STATUS MUTATION
     const statusMutation = useMutation({
         mutationFn: ({ id, status }: { id: number; status: boolean }) => updatePackageStatus(id, status),
         onSuccess: () => {
@@ -70,7 +74,6 @@ export const PackagesPage = () => {
         onError: () => toastError("Error al actualizar el estado.")
     });
 
-    // B. VISIBILITY MUTATION
     const visibilityMutation = useMutation({
         mutationFn: ({ id, isPublic }: { id: number; isPublic: boolean }) => updatePackageVisibility(id, isPublic),
         onSuccess: () => {
@@ -82,7 +85,6 @@ export const PackagesPage = () => {
         onError: () => toastError("Error al cambiar la visibilidad.")
     });
 
-    // C. DELETE MUTATION
     const deleteMutation = useMutation({
         mutationFn: deletePackage,
         onSuccess: () => {
@@ -94,9 +96,20 @@ export const PackagesPage = () => {
         onError: () => toastError("No se pudo eliminar el paquete.")
     });
 
-    // --- HANDLERS (Interceptores que abren modales) ---
+    // --- HANDLERS ---
 
-    // 1. Manejo de STATUS (Activo/Inactivo)
+    // ✅ NUEVO: Manejo de Crear/Editar
+    const handleCreate = () => {
+        setEditingPackage(null);
+        setIsFormModalOpen(true);
+    };
+
+    const handleEdit = (pkg: Package) => {
+        setEditingPackage(pkg);
+        setIsFormModalOpen(true);
+    };
+
+    // Manejo de Switches y Borrado
     const handleStatusClick = (pkg: Package) => {
         setPackageToToggle(pkg);
         setIsStatusModalOpen(true);
@@ -108,7 +121,6 @@ export const PackagesPage = () => {
         }
     };
 
-    // 2. Manejo de VISIBILIDAD (Público/Privado)
     const handleVisibilityClick = (pkg: Package) => {
         setPackageToToggle(pkg);
         setIsVisibilityModalOpen(true);
@@ -120,7 +132,6 @@ export const PackagesPage = () => {
         }
     };
 
-    // 3. Manejo de ELIMINAR
     const handleDeleteClick = (pkg: Package) => {
         setPackageToToggle(pkg);
         setIsDeleteModalOpen(true);
@@ -178,7 +189,6 @@ export const PackagesPage = () => {
                 </div>
             )
         },
-        // COLUMN: PUBLICO (Switch 1)
         {
             header: <span className="flex items-center gap-1"><Globe size={14}/> Público</span>,
             className: 'text-center w-20',
@@ -191,14 +201,12 @@ export const PackagesPage = () => {
                         <TravesiaSwitch 
                             checked={row.isPublic} 
                             onChange={() => {}} 
-                            // Loading solo si es ESTE paquete Y es ESTA mutación
                             isLoading={visibilityMutation.isPending && visibilityMutation.variables?.id === row.id}
                         />
                     </div>
                 </div>
             )
         },
-        // COLUMN: STATUS (Switch 2)
         {
             header: <span className="flex items-center gap-1"><Power size={14}/> Activo</span>,
             className: 'text-center w-20',
@@ -224,14 +232,14 @@ export const PackagesPage = () => {
                 <div className="flex justify-end items-center gap-2">
                     <button 
                         className="btn btn-square btn-sm btn-ghost text-info hover:bg-info/10"
-                        onClick={() => { setSelectedPackage(row); setDetailsModalOpen(true); }}
+                        onClick={() => { setSelectedPackageForDetails(row); setDetailsModalOpen(true); }}
                         title="Ver productos del paquete"
                     >
                         <Eye size={18} />
                     </button>
 
                     <CrudButtons 
-                        onEdit={() => console.log("Editar Pendiente", row.id)} 
+                        onEdit={() => handleEdit(row)} // ✅ CONECTADO
                         onDelete={() => handleDeleteClick(row)} 
                     />
                 </div>
@@ -247,7 +255,8 @@ export const PackagesPage = () => {
                     <h1 className="text-2xl font-bold text-base-content">Paquetes Comerciales</h1>
                     <p className="text-sm text-base-content/60">Gestiona ofertas, combos y promociones.</p>
                 </div>
-                <BtnCreate onClick={() => console.log("Crear Paquete Pendiente")} />
+                {/* ✅ CONECTADO BOTÓN CREAR */}
+                <BtnCreate onClick={handleCreate} />
             </div>
 
             {/* Filtros */}
@@ -296,16 +305,23 @@ export const PackagesPage = () => {
                 isLoading={isLoading} 
             />
 
-            {/* MODAL DETALLES (Info) */}
+            {/* MODAL DETALLES (SOLO LECTURA) */}
             <PackageDetailsModal 
                 isOpen={detailsModalOpen}
                 onClose={() => setDetailsModalOpen(false)}
-                pkg={selectedPackage}
+                pkg={selectedPackageForDetails}
             />
 
-            {/* --- MODALES DE CONFIRMACIÓN --- */}
+            {/* ✅ NUEVO: MODAL FORMULARIO (CREAR / EDITAR) */}
+            {isFormModalOpen && (
+                <PackageFormModal 
+                    isOpen={isFormModalOpen}
+                    onClose={() => setIsFormModalOpen(false)}
+                    packageToEdit={editingPackage}
+                />
+            )}
 
-            {/* 1. Confirmar STATUS (Activo/Inactivo) */}
+            {/* MODALES CONFIRMACIÓN */}
             <ConfirmationModal
                 isOpen={isStatusModalOpen}
                 onClose={() => { setIsStatusModalOpen(false); setPackageToToggle(null); }}
@@ -319,7 +335,6 @@ export const PackagesPage = () => {
                 isLoading={statusMutation.isPending}
             />
 
-            {/* 2. Confirmar VISIBILIDAD (Público/Privado) */}
             <ConfirmationModal
                 isOpen={isVisibilityModalOpen}
                 onClose={() => { setIsVisibilityModalOpen(false); setPackageToToggle(null); }}
@@ -333,7 +348,6 @@ export const PackagesPage = () => {
                 isLoading={visibilityMutation.isPending}
             />
 
-            {/* 3. Confirmar ELIMINAR */}
             <ConfirmationModal
                 isOpen={isDeleteModalOpen}
                 onClose={() => { setIsDeleteModalOpen(false); setPackageToToggle(null); }}
