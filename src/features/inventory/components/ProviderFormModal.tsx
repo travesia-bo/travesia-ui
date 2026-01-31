@@ -2,22 +2,30 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { TravesiaModal } from "../../../components/ui/TravesiaModal";
-import { TravesiaInput } from "../../../components/ui/TravesiaInput";
-import { TravesiaSelect } from "../../../components/ui/TravesiaSelect";
-import { TravesiaButton } from "../../../components/ui/TravesiaButton";
+import { useMutation, useQueryClient } from "@tanstack/react-query"; 
+import { toast } from "sonner"; 
+
+// Hooks y Contextos
 import { useCities } from "../../../hooks/useCities";
 import { useParameters } from "../../../hooks/useParameters";
 import { PARAM_CATEGORIES } from "../../../config/constants";
-import { Provider } from "../types";
-import { IconRenderer } from "../../../components/ui/IconRenderer";
-import { useMutation, useQueryClient } from "@tanstack/react-query"; // 1. IMPORTAR ESTO
-import { createProvider, updateProvider } from "../services/providerService"; // 2. IMPORTAR SERVICIOS
-import { toast } from "sonner"; // Opcional: Para notificaciones bonitas (o usa alert)
-import { BtnSave, BtnCancel, BtnBack, BtnNext } from "../../../components/ui/CrudButtons";
 import { useToast } from "../../../context/ToastContext";
 
-// 1. ESQUEMA DE VALIDACIÓN (DTO Backend)
+// Servicios y Tipos
+import { createProvider, updateProvider } from "../services/providerService"; 
+import { Provider } from "../types";
+
+// UI Components
+import { TravesiaModal } from "../../../components/ui/TravesiaModal";
+import { TravesiaInput } from "../../../components/ui/TravesiaInput";
+import { TravesiaSelect } from "../../../components/ui/TravesiaSelect";
+import { TravesiaStepper } from "../../../components/ui/TravesiaStepper"; // ✅ 1. IMPORTAR STEPPER
+import { BtnSave, BtnCancel, BtnBack, BtnNext } from "../../../components/ui/CrudButtons";
+
+// 2. DEFINICIÓN DE LOS PASOS
+const PROVIDER_STEPS = ["Datos del Contacto", "Datos de la Empresa"];
+
+// ESQUEMA DE VALIDACIÓN
 const providerSchema = z.object({
     // --- PASO 1: PERSONA (Contacto) ---
     contactFirstName: z.string().min(1, "El nombre es obligatorio").max(100),
@@ -25,13 +33,13 @@ const providerSchema = z.object({
     contactMaternalSurname: z.string().max(45).optional(),
     contactIdentityCard: z.string().max(45).optional(),
     contactPhoneNumber: z.coerce.number({ invalid_type_error: "Debe ser un número" }).min(60000000, "Número inválido (mín 8 dígitos)"), 
-    contactEmail: z.string().email("Correo inválido").optional().or(z.literal("")), // Permite vacío o email válido
+    contactEmail: z.string().email("Correo inválido").optional().or(z.literal("")), 
     imageUrl: z.string().optional(),
 
     // --- PASO 2: PROVEEDOR (Empresa) ---
     name: z.string().min(1, "El nombre de la empresa es obligatorio").max(45),
     address: z.string().min(5, "Dirección muy corta (mín 5 letras)").max(200),
-    cityId: z.coerce.string().min(1, "Debe seleccionar una ciudad"), // Validamos como string en el form
+    cityId: z.coerce.string().min(1, "Debe seleccionar una ciudad"), 
     statusType: z.coerce.string().min(1, "Debe seleccionar un estado"),
 });
 
@@ -44,121 +52,36 @@ interface Props {
 }
 
 export const ProviderFormModal = ({ isOpen, onClose, providerToEdit }: Props) => {
-    // Hooks de datos
     const { success, error: toastError } = useToast();
+    const queryClient = useQueryClient();
+
+    // Hooks de datos
     const { data: cities = [], isLoading: loadingCities } = useCities();
     const { parameters: statuses, isLoading: loadingStatuses } = useParameters(PARAM_CATEGORIES.PROVIDER_STATUS);
 
     // Estado del Wizard
     const [currentStep, setCurrentStep] = useState(1);
+    const [manualShake, setManualShake] = useState(0);
 
     // Formulario
-    const { register, handleSubmit, reset, trigger, formState: { errors, isSubmitting, submitCount } } = useForm<ProviderFormData>({
+    const { register, handleSubmit, reset, trigger, formState: { errors, submitCount } } = useForm<ProviderFormData>({
         resolver: zodResolver(providerSchema),
         defaultValues: {
-            // Inicializar para evitar warnings de uncontrolled/controlled
             contactFirstName: "", contactPaternalSurname: "", contactMaternalSurname: "", 
             contactPhoneNumber: undefined, contactEmail: "", 
             name: "", address: "", cityId: "", statusType: ""
         }
     });
 
-    // Resetear al abrir/cerrar
-    useEffect(() => {
-        if (isOpen) {
-            setCurrentStep(1); // Siempre empezar en el paso 1
-            if (providerToEdit) {
-                // Aquí haríamos el mapeo inverso (Provider -> Form)
-                // OJO: Tu Provider trae "contactFullName", pero el form pide "FirstName/Surname". 
-                // Si el backend no devuelve los apellidos separados al listar, tendremos un problema al Editar.
-                // Por ahora, asumiremos modo CREACIÓN para este ejemplo.
-            } else {
-                reset();
-            }
-        }
-    }, [isOpen, providerToEdit, reset]);
-
-    // --- LÓGICA DE NAVEGACIÓN ---
-    const handleNextStep = async () => {
-        // Validamos SOLO los campos del paso 1
-        const isValidStep1 = await trigger([
-            "contactFirstName", 
-            "contactPhoneNumber", 
-            "contactEmail",
-            "contactPaternalSurname",
-            "contactMaternalSurname"
-        ]);
-        
-        if (isValidStep1) {
-            setCurrentStep(2);
-        } else {
-            // ¡AQUÍ ESTÁ LA MAGIA!
-            // Si falla, aumentamos el contador para que cambie la 'key' y tiemble
-            setManualShake(prev => prev + 1);
-        }
-        // Si no es válido, el 'trigger' automáticamente muestra los errores y activa el shake
-    };
-
-    const handlePrevStep = () => setCurrentStep(1);
-
-    // const onSubmit = async (data: ProviderFormData) => {
-    //     // Transformación final de datos para enviar al backend (String -> Integer)
-    //     const payload = {
-    //         ...data,
-    //         cityId: Number(data.cityId),
-    //         statusType: Number(data.statusType),
-    //         contactPhoneNumber: Number(data.contactPhoneNumber)
-    //     };
-
-    //     console.log("🚀 Payload listo para enviar:", payload);
-    //     // await createProviderMutation(payload);
-    //     onClose();
-    // };
-
-    // 3. HOOK PARA INVALIDAR CACHÉ (Refrescar tabla)
-    const queryClient = useQueryClient();
-
-    // 4. CONFIGURAR LA MUTATION (La magia de React Query)
-    const mutation = useMutation({
-        mutationFn: (data: any) => {
-            // Decide si crear o editar según si existe providerToEdit
-            if (providerToEdit) {
-                return updateProvider(providerToEdit.id, data);
-            }
-            return createProvider(data);
-        },
-        onSuccess: () => {
-            // A) Refrescar la lista de proveedores automáticamente
-            queryClient.invalidateQueries({ queryKey: ['providers'] });
-            const action = providerToEdit ? "actualizado" : "creado";
-            success(`Proveedor ${action} correctamente.`);
-            // B) Cerrar modal y notificar
-            // toast.success("Proveedor guardado correctamente");
-            console.log("✅ Guardado con éxito");
-            onClose();
-        },
-        onError: (error: any) => {
-            console.error("Error al guardar:", error);
-            // toast.error("Error al guardar proveedor");
-            toastError("No se pudo guardar el proveedor. Intente nuevamente.");
-            console.log("Error al guardar: " + (error.response?.data?.message || "Error desconocido"));
-        }
-    });// ... (useForm hook igual) ...
-
-    // NUEVO ESTADO: Para forzar el shake manualmente en el paso 1
-    const [manualShake, setManualShake] = useState(0);
-    // 3. EFECTO DE PRE-CARGA DE DATOS (Actualizado)
+    // Resetear al abrir/cerrar y Cargar Datos
     useEffect(() => {
         if (isOpen) {
             setCurrentStep(1);
             setManualShake(0);
 
             if (providerToEdit) {
-                // === MODO EDICIÓN: Mapeo Directo y Seguro ===
-                // Ya no necesitamos adivinar con .split(), el backend nos da todo
-                
+                // MODO EDICIÓN
                 reset({
-                    // Datos Persona (Manejo de nulls con || "")
                     contactFirstName: providerToEdit.contactFirstName,
                     contactPaternalSurname: providerToEdit.contactPaternalSurname || "", 
                     contactMaternalSurname: providerToEdit.contactMaternalSurname || "", 
@@ -166,50 +89,67 @@ export const ProviderFormModal = ({ isOpen, onClose, providerToEdit }: Props) =>
                     contactPhoneNumber: providerToEdit.contactPhoneNumber,
                     contactEmail: providerToEdit.contactEmail || "",
                     
-                    // Datos Empresa
                     name: providerToEdit.name,
                     address: providerToEdit.address,
                     
-                    // Selects: Aseguramos que sean string para que el <select> lo detecte
                     cityId: providerToEdit.cityId.toString(), 
                     statusType: providerToEdit.statusCode.toString(), 
                 });
             } else {
-                // === MODO CREAR (Limpiar todo) ===
+                // MODO CREAR
                 reset({
-                    contactFirstName: "", 
-                    contactPaternalSurname: "", 
-                    contactMaternalSurname: "", 
-                    contactIdentityCard: "",
-                    contactPhoneNumber: undefined, 
-                    contactEmail: "", 
-                    
-                    name: "", 
-                    address: "", 
-                    cityId: "", 
-                    statusType: ""
+                    contactFirstName: "", contactPaternalSurname: "", contactMaternalSurname: "", 
+                    contactIdentityCard: "", contactPhoneNumber: undefined, contactEmail: "", 
+                    name: "", address: "", cityId: "", statusType: ""
                 });
             }
         }
     }, [isOpen, providerToEdit, reset]);
 
-    // ... (handleNextStep, handlePrevStep igual) ...
+    // --- LÓGICA DE NAVEGACIÓN ---
+    const handleNextStep = async () => {
+        const isValidStep1 = await trigger([
+            "contactFirstName", "contactPhoneNumber", "contactEmail",
+            "contactPaternalSurname", "contactMaternalSurname"
+        ]);
+        
+        if (isValidStep1) {
+            setCurrentStep(2);
+            setManualShake(0); // Resetear shake al cambiar de paso
+        } else {
+            setManualShake(prev => prev + 1);
+        }
+    };
+
+    const handlePrevStep = () => setCurrentStep(1);
+
+    // --- MUTATION ---
+    const mutation = useMutation({
+        mutationFn: (data: any) => {
+            if (providerToEdit) return updateProvider(providerToEdit.id, data);
+            return createProvider(data);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['providers'] });
+            const action = providerToEdit ? "actualizado" : "creado";
+            success(`Proveedor ${action} correctamente.`);
+            onClose();
+        },
+        onError: (error: any) => {
+            console.error("Error al guardar:", error);
+            toastError("No se pudo guardar el proveedor.");
+        }
+    });
 
     const onSubmit = async (data: ProviderFormData) => {
-        // Transformación de datos (String -> Number)
         const payload = {
             ...data,
             cityId: Number(data.cityId),
             statusType: Number(data.statusType),
             contactPhoneNumber: Number(data.contactPhoneNumber),
-            // Aseguramos que campos opcionales vayan como null si están vacíos
             contactEmail: data.contactEmail || null, 
-            imageUrl: null // Por ahora null, luego veremos subida de imágenes
+            imageUrl: null 
         };
-
-        console.log("🚀 Enviando Payload:", payload);
-        
-        // 5. EJECUTAR LA MUTATION
         mutation.mutate(payload); 
     };
 
@@ -218,10 +158,8 @@ export const ProviderFormModal = ({ isOpen, onClose, providerToEdit }: Props) =>
             isOpen={isOpen}
             onClose={onClose}
             title={providerToEdit ? "Editar Proveedor" : "Nuevo Proveedor"}
-            // Footer Personalizado según el paso
             actions={
                 <div className="flex justify-between w-full">
-                    {/* Botón Atrás (Solo visible en paso 2) */}
                     <div>
                         {currentStep === 2 && (
                             <BtnBack onClick={handlePrevStep} />
@@ -229,18 +167,12 @@ export const ProviderFormModal = ({ isOpen, onClose, providerToEdit }: Props) =>
                     </div>
                     
                     <div className="flex gap-2">
-                        <BtnCancel 
-                            onClick={onClose} 
-                            disabled={mutation.isPending} 
-                        />
+                        <BtnCancel onClick={onClose} disabled={mutation.isPending} />
                         
                         {currentStep === 1 ? (
-                            /* Botón Siguiente Reutilizable */
                             <BtnNext onClick={handleNextStep} />
                         ) : (
-                            /* Botón Guardar Reutilizable */
                             <BtnSave 
-                                // Sobreescribimos el label por defecto "Guardar" para dar feedback
                                 label={mutation.isPending ? "Guardando..." : "Guardar"} 
                                 isLoading={mutation.isPending}
                                 onClick={handleSubmit(onSubmit)} 
@@ -250,27 +182,12 @@ export const ProviderFormModal = ({ isOpen, onClose, providerToEdit }: Props) =>
                 </div>
             }
         >
-{/* INDICADOR DE PASOS */}
-            <div className="w-full mb-8 px-4">
-                <ul className="steps steps-horizontal w-full">
-                    {/* PASO 1 */}
-                    <li 
-                        /* IMPORTANTE: Este atributo es el que lee el CSS */
-                        data-content={currentStep > 1 ? "✓" : "1"} 
-                        className={`step ${currentStep >= 1 ? 'step-primary' : ''}`}
-                    >
-                        Datos del Contacto
-                    </li>
-                    
-                    {/* PASO 2 */}
-                    <li 
-                        data-content="2" 
-                        className={`step ${currentStep >= 2 ? 'step-primary' : ''}`}
-                    >
-                        Datos de la Empresa
-                    </li>
-                </ul>
-            </div>
+            {/* ✅ 3. REEMPLAZO: USAMOS EL COMPONENTE REUTILIZABLE */}
+            <TravesiaStepper 
+                steps={PROVIDER_STEPS} 
+                currentStep={currentStep} 
+                className="mb-6"
+            />
 
             <form className="min-h-[300px]">
                 
@@ -281,7 +198,7 @@ export const ProviderFormModal = ({ isOpen, onClose, providerToEdit }: Props) =>
                             label="Nombres" 
                             placeholder="Ej: Juan Daniel"
                             error={errors.contactFirstName?.message}
-                            shakeKey={submitCount + manualShake} // <--- NUEVO
+                            shakeKey={submitCount + manualShake}
                             isRequired
                             {...register("contactFirstName")}
                         />
@@ -315,7 +232,7 @@ export const ProviderFormModal = ({ isOpen, onClose, providerToEdit }: Props) =>
                             icon="phone"
                             isRequired
                             error={errors.contactPhoneNumber?.message}
-                            shakeKey={submitCount + manualShake} // <--- NUEVO
+                            shakeKey={submitCount + manualShake}
                             {...register("contactPhoneNumber")}
                         />
                         <TravesiaInput 
@@ -330,15 +247,11 @@ export const ProviderFormModal = ({ isOpen, onClose, providerToEdit }: Props) =>
 
                 {/* --- PASO 2: DATOS DEL PROVEEDOR --- */}
                 <div className={currentStep === 2 ? "block space-y-4 animate-fade-in" : "hidden"}>
-                    {/* <div className="alert alert-info text-sm shadow-sm">
-                        <IconRenderer iconName="info" size={18} />
-                        <span>Estás vinculando a: <b>{currentStep === 2 ? register("contactFirstName").name : ""}</b></span> 
-                    </div> */}
-
+                    
                     <TravesiaInput 
                         label="Nombre Comercial / Empresa" 
                         placeholder="Ej: Hotel Los Ceibos"
-                        shakeKey={submitCount + manualShake} // <--- NUEVO
+                        shakeKey={submitCount + manualShake}
                         isRequired
                         error={errors.name?.message}
                         {...register("name")}
@@ -349,9 +262,8 @@ export const ProviderFormModal = ({ isOpen, onClose, providerToEdit }: Props) =>
                             label="Ciudad"
                             options={cities.map(c => ({ value: c.id, label: c.name }))}
                             isLoading={loadingCities}
-                            shakeKey={submitCount + manualShake} // <--- NUEVO
+                            shakeKey={submitCount + manualShake}
                             isRequired
-                            // enableDefaultOption={false} -> Por defecto es false en selectores obligatorios
                             error={errors.cityId?.message}
                             {...register("cityId")}
                         />
@@ -360,7 +272,7 @@ export const ProviderFormModal = ({ isOpen, onClose, providerToEdit }: Props) =>
                             label="Estado Inicial"
                             options={statuses.map(s => ({ value: s.numericCode, label: s.name }))}
                             isLoading={loadingStatuses}
-                            shakeKey={submitCount + manualShake} // <--- NUEVO
+                            shakeKey={submitCount + manualShake}
                             isRequired
                             error={errors.statusType?.message}
                             {...register("statusType")}
@@ -371,7 +283,7 @@ export const ProviderFormModal = ({ isOpen, onClose, providerToEdit }: Props) =>
                         label="Dirección Física" 
                         placeholder="Av. Principal #123, Zona Sur"
                         icon="map-pin"
-                        shakeKey={submitCount + manualShake} // <--- NUEVO
+                        shakeKey={submitCount + manualShake}
                         isRequired
                         error={errors.address?.message}
                         {...register("address")}
