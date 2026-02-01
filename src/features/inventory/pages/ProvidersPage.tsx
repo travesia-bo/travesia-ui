@@ -172,7 +172,7 @@ export const ProvidersPage = () => {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-base-content">Proveedores</h1>
-                    <p className="text-sm text-base-content/60">Gestión de hoteles, alojamientos y servicios.</p>
+                    <p className="text-sm text-base-content/60">Gestión de proveedores de productos y servicios.</p>
                 </div>
                 <BtnCreate 
                     onClick={handleCreate}
