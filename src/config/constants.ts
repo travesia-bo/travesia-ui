@@ -18,3 +18,13 @@ export interface SystemParameter {
     description?: string;
     category: string;
 }
+
+// ... otras constantes ...
+
+// ✅ MAPA DE ESTADOS DE PROVEEDOR (Ajusta los IDs según tu Base de Datos)
+export const PROVIDER_STATUS_ID = {
+    PENDING: 121,
+    CONFIRMED: 122,
+    CANCELLED: 123,
+    INACTIVE: 124
+};
