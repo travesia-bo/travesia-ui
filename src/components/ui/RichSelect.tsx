@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { createPortal } from "react-dom"; // 👈 IMPORTANTE
+import { createPortal } from "react-dom"; 
 import { ChevronDown, Check, Search } from "lucide-react";
 
 export interface RichOption {
@@ -7,6 +7,7 @@ export interface RichOption {
     label: string;
     subtitle?: string;
     icon?: React.ReactNode;
+    rightContent?: React.ReactNode; // ✅ NUEVO: Para el Badge de estado
 }
 
 interface Props {
@@ -18,32 +19,46 @@ interface Props {
     error?: string;
     isLoading?: boolean;
     icon?: React.ReactNode;
+    shakeKey?: number;
 }
 
-export const RichSelect = ({ label, placeholder, options, value, onChange, error, isLoading, icon }: Props) => {
+export const RichSelect = ({ label, placeholder, options, value, onChange, error, isLoading, icon, shakeKey = 0 }: Props) => {
+    // ... (Estados y Refs se mantienen igual) ...
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
-    
-    // Referencia al botón para calcular dónde dibujarnos
     const buttonRef = useRef<HTMLButtonElement>(null);
     const [menuCoords, setMenuCoords] = useState({ top: 0, left: 0, width: 0 });
+    const [isShaking, setIsShaking] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
-    // Encontrar la opción seleccionada
-    const selectedOption = options.find(opt => opt.value === value);
+    // ... (Toda la lógica de useEffects, shake y updatePosition se mantiene IGUAL) ...
+    useEffect(() => {
+        if (shakeKey > 0) {
+            setIsShaking(false);
+            const startTimer = setTimeout(() => setIsShaking(true), 10);
+            const endTimer = setTimeout(() => setIsShaking(false), 510);
+            return () => { clearTimeout(startTimer); clearTimeout(endTimer); };
+        }
+    }, [shakeKey]);
 
-    // Filtrar opciones
-    const filteredOptions = options.filter(opt => 
-        opt.label.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        opt.subtitle?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    useEffect(() => {
+        if (!isOpen) return;
+        const handleScrollOrResize = () => updatePosition();
+        window.addEventListener("scroll", handleScrollOrResize, true);
+        window.addEventListener("resize", handleScrollOrResize);
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            window.removeEventListener("scroll", handleScrollOrResize, true);
+            window.removeEventListener("resize", handleScrollOrResize);
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [isOpen]);
 
-    // --- LÓGICA DE POSICIONAMIENTO ---
     const updatePosition = () => {
         if (buttonRef.current) {
             const rect = buttonRef.current.getBoundingClientRect();
-            // Calculamos la posición fija en la pantalla
             setMenuCoords({
-                top: rect.bottom + window.scrollY + 6, // 6px abajo del botón
+                top: rect.bottom + window.scrollY + 6,
                 left: rect.left + window.scrollX,
                 width: rect.width
             });
@@ -59,57 +74,27 @@ export const RichSelect = ({ label, placeholder, options, value, onChange, error
         }
     };
 
-    // Cerrar al hacer scroll o resize (para que el menú no se quede flotando solo)
-    useEffect(() => {
-        if (!isOpen) return;
-
-        const handleScrollOrResize = () => {
-            // Opción A: Recalcular posición (el menú sigue al botón)
-            updatePosition(); 
-            // Opción B (Más segura): Cerrar el menú si scrollean mucho
-            // setIsOpen(false); 
-        };
-
-        window.addEventListener("scroll", handleScrollOrResize, true); // true = capture phase (detecta scroll de modales)
-        window.addEventListener("resize", handleScrollOrResize);
-        document.addEventListener("mousedown", handleClickOutside);
-
-        return () => {
-            window.removeEventListener("scroll", handleScrollOrResize, true);
-            window.removeEventListener("resize", handleScrollOrResize);
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
-    }, [isOpen]);
-
-    // Cerrar click fuera (Detecta clicks en el portal y en el botón)
-    const dropdownRef = useRef<HTMLDivElement>(null);
-    
     const handleClickOutside = (event: MouseEvent) => {
-        // Si el click NO fue en el botón Y NO fue en el dropdown flotante
-        if (
-            buttonRef.current && 
-            !buttonRef.current.contains(event.target as Node) &&
-            dropdownRef.current && 
-            !dropdownRef.current.contains(event.target as Node)
-        ) {
+        if (buttonRef.current && !buttonRef.current.contains(event.target as Node) &&
+            dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
             setIsOpen(false);
         }
     };
 
-    // --- RENDERIZADO DEL CONTENIDO DEL MENÚ ---
-    // Esto es lo que se enviará al Portal
+    // Filtros
+    const selectedOption = options.find(opt => opt.value === value);
+    const filteredOptions = options.filter(opt => 
+        opt.label.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        opt.subtitle?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    // Render del menú
     const menuContent = (
         <div 
             ref={dropdownRef}
             className="fixed z-[10000] bg-base-100 border border-base-200 rounded-xl shadow-2xl overflow-hidden flex flex-col animate-fade-in-up"
-            style={{
-                top: menuCoords.top,
-                left: menuCoords.left,
-                width: menuCoords.width,
-                maxHeight: '300px' // Altura máxima para que no se salga de pantalla
-            }}
+            style={{ top: menuCoords.top, left: menuCoords.left, width: menuCoords.width, maxHeight: '300px' }}
         >
-            {/* Buscador interno */}
             <div className="p-2 border-b border-base-200 bg-base-100 z-10">
                 <div className="relative">
                     <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 opacity-50"/>
@@ -123,8 +108,6 @@ export const RichSelect = ({ label, placeholder, options, value, onChange, error
                     />
                 </div>
             </div>
-
-            {/* Lista de Opciones */}
             <div className="overflow-y-auto custom-scrollbar p-1">
                 {filteredOptions.length > 0 ? (
                     filteredOptions.map((opt) => (
@@ -141,20 +124,25 @@ export const RichSelect = ({ label, placeholder, options, value, onChange, error
                                 ${value === opt.value ? 'bg-primary/10 text-primary' : 'hover:bg-base-200'}
                             `}
                         >
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-3 overflow-hidden">
                                 {opt.icon && <span className="opacity-70">{opt.icon}</span>}
-                                <div>
+                                <div className="flex-1 min-w-0">
                                     <div className={`font-semibold text-sm ${value === opt.value ? 'font-bold' : ''}`}>
                                         {opt.label}
                                     </div>
                                     {opt.subtitle && (
-                                        <div className="text-[10px] opacity-60 group-hover:opacity-80 leading-tight">
+                                        <div className="text-[10px] opacity-60 group-hover:opacity-80 leading-tight truncate">
                                             {opt.subtitle}
                                         </div>
                                     )}
                                 </div>
                             </div>
-                            {value === opt.value && <Check size={16} />}
+                            
+                            {/* ✅ AQUI MOSTRAMOS EL BADGE A LA DERECHA */}
+                            <div className="flex items-center gap-2 pl-2">
+                                {opt.rightContent}
+                                {value === opt.value && <Check size={16} />}
+                            </div>
                         </button>
                     ))
                 ) : (
@@ -165,17 +153,13 @@ export const RichSelect = ({ label, placeholder, options, value, onChange, error
     );
 
     return (
-        <div className="form-control w-full">
+        <div className={`form-control w-full ${isShaking ? 'animate-shake' : ''}`}>
             <label className="label">
-                <span className="label-text font-medium flex items-center gap-2">
-                    {icon} {label}
-                </span>
+                <span className="label-text font-medium flex items-center gap-2">{icon} {label}</span>
             </label>
-
             <div className="relative">
-                {/* BOTÓN PRINCIPAL (Trigger) */}
                 <button
-                    ref={buttonRef} // 👈 Referencia clave
+                    ref={buttonRef}
                     type="button"
                     onClick={handleOpen}
                     disabled={isLoading}
@@ -187,29 +171,22 @@ export const RichSelect = ({ label, placeholder, options, value, onChange, error
                     `}
                 >
                     {selectedOption ? (
-                        <div className="flex flex-col min-w-0">
-                            <span className="font-bold text-base-content truncate">{selectedOption.label}</span>
-                            {selectedOption.subtitle && (
-                                <span className="text-xs text-base-content/60 truncate">{selectedOption.subtitle}</span>
-                            )}
+                        <div className="flex items-center justify-between w-full">
+                            <div className="flex flex-col min-w-0">
+                                <span className="font-bold text-base-content truncate">{selectedOption.label}</span>
+                                {selectedOption.subtitle && <span className="text-xs text-base-content/60 truncate">{selectedOption.subtitle}</span>}
+                            </div>
+                            {/* También mostramos el badge si ya está seleccionado */}
+                            {selectedOption.rightContent && <div className="scale-75 origin-right">{selectedOption.rightContent}</div>}
                         </div>
                     ) : (
-                        <span className="text-base-content/40 text-sm">
-                            {isLoading ? "Cargando..." : (placeholder || "Seleccionar...")}
-                        </span>
+                        <span className="text-base-content/40 text-sm">{isLoading ? "Cargando..." : (placeholder || "Seleccionar...")}</span>
                     )}
-                    <ChevronDown size={18} className={`transition-transform duration-200 opacity-50 shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown size={18} className={`ml-2 transition-transform duration-200 opacity-50 shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
                 </button>
-
-                {/* 🔥 LA MAGIA: Renderizamos el menú FUERA del modal, directo en el body */}
                 {isOpen && createPortal(menuContent, document.body)}
             </div>
-
-            {error && (
-                <label className="label">
-                    <span className="label-text-alt text-error">{error}</span>
-                </label>
-            )}
+            {error && <label className="label"><span className="label-text-alt text-error">{error}</span></label>}
         </div>
     );
 };

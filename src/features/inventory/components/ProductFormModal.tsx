@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { MapPin, Box, Store, Tag, DollarSign, Calculator } from "lucide-react"; 
+import { MapPin, Box, Store, Tag, DollarSign } from "lucide-react"; 
 
 // Hooks y Servicios
 import { createProduct, updateProduct } from "../services/productService";
@@ -18,7 +18,7 @@ import { RichSelect } from "../../../components/ui/RichSelect";
 import { BtnSave, BtnCancel, BtnNext, BtnBack } from "../../../components/ui/CrudButtons";
 import { TravesiaModal } from "../../../components/ui/TravesiaModal";
 import { TravesiaStepper } from "../../../components/ui/TravesiaStepper";
-import { TravesiaImageUploader, ImageItem } from "../../../components/ui/TravesiaImageUploader.tsx"; // Nuevo
+import { TravesiaImageUploader, ImageItem } from "../../../components/ui/TravesiaImageUploader";
 
 // Types
 import { CreateProductRequest, Product } from "../types";
@@ -30,6 +30,9 @@ interface Props {
 }
 
 const PRODUCT_STEPS = ["Información", "Precios y Stock", "Ubicación", "Imágenes"];
+
+// Regex para validar máximo 2 decimales y números positivos
+const PRICE_REGEX = /^\d+(\.\d{1,2})?$/;
 
 export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
     const { success, error: toastError } = useToast();
@@ -45,7 +48,7 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
     const [manualShake, setManualShake] = useState(0);
     const [isCreatingLocation, setIsCreatingLocation] = useState(false);
     
-    // Estado para Imágenes (Local antes de enviar)
+    // Estado para Imágenes
     const [localImages, setLocalImages] = useState<ImageItem[]>([]);
 
     // Formulario
@@ -66,11 +69,9 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
         }
     });
 
-    // Observadores para cálculos
     const watchedCost = watch("providerCost");
     const watchedStock = watch("physicalStock");
 
-    // Cálculo de Deuda al Proveedor
     const totalProviderDebt = useMemo(() => {
         return (Number(watchedCost) || 0) * (Number(watchedStock) || 0);
     }, [watchedCost, watchedStock]);
@@ -91,7 +92,6 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                 setValue("peopleCapacity", productToEdit.peopleCapacity);
                 
                 setValue("providerCost", productToEdit.providerCost);
-                // Si el backend no devuelve referencePrice en lectura aún, usar 0 o lo que venga
                 setValue("referencePrice", (productToEdit as any).referencePrice || 0); 
                 
                 if (productToEdit.providerId) setValue("providerId", productToEdit.providerId);
@@ -103,8 +103,6 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                 } else {
                     setIsCreatingLocation(false);
                 }
-
-                // Imágenes (Aquí deberías mapear las que vienen del backend a ImageItem si existieran)
                 setLocalImages([]); 
 
             } else {
@@ -126,21 +124,20 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
         let fieldsToValidate: any[] = [];
 
         switch (currentStep) {
-            case 1: // Información
+            case 1:
                 fieldsToValidate = ["name", "description", "categoryType"];
                 break;
-            case 2: // Precios
+            case 2:
                 fieldsToValidate = ["providerId", "providerCost", "physicalStock", "peopleCapacity", "referencePrice"];
                 break;
-            case 3: // Ubicación
+            case 3:
                 if (isCreatingLocation) fieldsToValidate = ["newLocation.name"];
                 else fieldsToValidate = ["locationId"];
                 break;
-            case 4: // Imágenes
-                // Validación manual: al menos 1 imagen
+            case 4:
                 if (localImages.length === 0) {
                     setManualShake(prev => prev + 1);
-                    return; // No avanza (aunque aquí ya es submit)
+                    return;
                 }
                 break;
         }
@@ -161,19 +158,14 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
         if (currentStep > 1) setCurrentStep(prev => prev - 1);
     };
 
-    // --- MUTATION ---
     const mutation = useMutation({
         mutationFn: (data: CreateProductRequest) => {
-            // Preparar Payload Final
             const payload = { ...data };
-            
-            // Lógica de Ubicación
             if (isCreatingLocation) payload.locationId = null; 
             else payload.newLocation = null;
 
-            // Transformar Imágenes para el Backend
             payload.images = localImages.map((img, index) => ({
-                imageUrl: img.file.name, // Simulamos subida enviando solo nombre
+                imageUrl: img.file.name,
                 isCover: img.isCover,
                 sortOrder: index + 1
             }));
@@ -195,7 +187,6 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
         mutation.mutate(data);
     };
 
-    // --- RENDER ---
     const modalTitle = (
         <div className="flex flex-col">
             <span className="flex items-center gap-2">
@@ -270,6 +261,8 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                         value={watch("categoryType")}
                         onChange={(val) => setValue("categoryType", Number(val))}
                         error={errors.categoryType ? "Requerido" : undefined}
+                        // ✅ AGREGAMOS EL SHAKE
+                        shakeKey={submitCount + manualShake}
                     />
                     <input type="hidden" {...register("categoryType", { required: true })} />
                 </div>
@@ -277,21 +270,44 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                 {/* --- PASO 2: PRECIOS Y STOCK --- */}
                 <div className={currentStep === 2 ? "block space-y-6 animate-fade-in" : "hidden"}>
                     
-                    {/* Sección Proveedor */}
                     <div className="bg-base-200/50 p-4 rounded-xl border border-base-200 space-y-4">
                         <h4 className="text-xs font-bold uppercase tracking-wider text-base-content/50 flex items-center gap-2">
                             <Store size={14}/> Datos de Compra (Proveedor)
                         </h4>
                         
-                        <RichSelect
+<RichSelect
                             label="Proveedor"
                             placeholder="Buscar Proveedor..."
                             isLoading={loadingProviders}
-                            options={providers.map(p => ({
-                                value: p.id,
-                                label: p.name,
-                                subtitle: p.cityName 
-                            }))}
+                            shakeKey={submitCount + manualShake}
+                            // FILTRO Y MAPEO
+                            options={providers
+                                // 1. Filtramos: Solo Confirmada (Activo) o Pendiente
+                                .filter(p => 
+                                    p.statusName.toLowerCase().includes('confirm') || 
+                                    p.statusName.toLowerCase().includes('pendient')
+                                )
+                                // 2. Mapeamos agregando el Badge visual
+                                .map(p => {
+                                    // Determinamos color del badge
+                                    const isConfirmed = p.statusName.toLowerCase().includes('confirm');
+                                    const badgeClass = isConfirmed 
+                                        ? "badge-success text-white" 
+                                        : "badge-warning text-white";
+
+                                    return {
+                                        value: p.id,
+                                        label: p.name,
+                                        subtitle: p.cityName,
+                                        // 3. Pasamos el componente visual a la derecha
+                                        rightContent: (
+                                            <span className={`badge ${badgeClass} text-[10px] font-bold border-0 h-5 px-2`}>
+                                                {isConfirmed ? "ACTIVO" : "PENDIENTE"}
+                                            </span>
+                                        )
+                                    };
+                                })
+                            }
                             value={watch("providerId")}
                             onChange={(val) => setValue("providerId", Number(val))}
                             error={errors.providerId ? "Requerido" : undefined}
@@ -303,20 +319,28 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                                 label="Costo Unitario (Bs)"
                                 type="number"
                                 step="0.01"
-                                {...register("providerCost", { required: "Requerido", min: 0 })}
+                                // ✅ VALIDACIÓN MEJORADA: Positivo y Regex Decimales
+                                {...register("providerCost", { 
+                                    required: "Requerido", 
+                                    min: { value: 0.01, message: "Mayor a 0" },
+                                    pattern: { value: PRICE_REGEX, message: "Máx. 2 decimales" }
+                                })}
                                 error={errors.providerCost?.message}
                                 shakeKey={submitCount + manualShake}
                             />
                             <TravesiaInput
-                                label="Stock Inicial"
+                                label="Stock Físico"
                                 type="number"
-                                {...register("physicalStock", { required: "Requerido", min: 0 })}
+                                // ✅ VALIDACIÓN MEJORADA: Entero Positivo (mínimo 1)
+                                {...register("physicalStock", { 
+                                    required: "Requerido", 
+                                    min: { value: 1, message: "Mínimo 1" } 
+                                })}
                                 error={errors.physicalStock?.message}
                                 shakeKey={submitCount + manualShake}
                             />
                         </div>
 
-                        {/* Deuda Calculada */}
                         {(watchedCost > 0 && watchedStock > 0) && (
                             <div className="flex justify-between items-center bg-base-100 p-3 rounded-lg border border-base-300">
                                 <span className="text-xs font-bold text-base-content/60">Inversión Total (Deuda):</span>
@@ -325,7 +349,6 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                         )}
                     </div>
 
-                    {/* Sección Venta */}
                     <div className="space-y-4">
                         <h4 className="text-xs font-bold uppercase tracking-wider text-base-content/50 flex items-center gap-2">
                             <DollarSign size={14}/> Datos de Venta
@@ -336,14 +359,23 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                                 type="number"
                                 step="0.01"
                                 className="input-success font-bold"
-                                {...register("referencePrice", { required: "Requerido", min: 0 })}
+                                // ✅ VALIDACIÓN MEJORADA
+                                {...register("referencePrice", { 
+                                    required: "Requerido", 
+                                    min: { value: 0.01, message: "Mayor a 0" },
+                                    pattern: { value: PRICE_REGEX, message: "Máx. 2 decimales" }
+                                })}
                                 error={errors.referencePrice?.message}
                                 shakeKey={submitCount + manualShake}
                             />
                             <TravesiaInput
                                 label="Capacidad (Pers.)"
                                 type="number"
-                                {...register("peopleCapacity", { required: "Requerido", min: 0 })}
+                                // ✅ VALIDACIÓN MEJORADA
+                                {...register("peopleCapacity", { 
+                                    required: "Requerido", 
+                                    min: { value: 1, message: "Mínimo 1" } 
+                                })}
                                 error={errors.peopleCapacity?.message}
                                 shakeKey={submitCount + manualShake}
                             />
@@ -380,7 +412,7 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                                 <TravesiaInput
                                     label="Nombre Ubicación"
                                     placeholder="Ej: Almacén Central"
-                                    {...register("newLocation.name", { required: isCreatingLocation ? "Requerido" : false })}
+                                    {...register("newLocation.name", { required: isCreatingLocation ? "Nombre requerido" : false })}
                                     error={errors.newLocation?.name?.message}
                                     shakeKey={submitCount + manualShake}
                                 />
@@ -413,6 +445,8 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                                     value={watch("locationId")}
                                     onChange={(val) => setValue("locationId", Number(val))}
                                     error={errors.locationId && !isCreatingLocation ? "Requerido" : undefined}
+                                    // ✅ AGREGAMOS EL SHAKE
+                                    shakeKey={submitCount + manualShake}
                                 />
                                 {!isCreatingLocation && (
                                     <input type="hidden" {...register("locationId", { required: true })} />
