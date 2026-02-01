@@ -45,6 +45,13 @@ export interface CreateLocationRequest {
     mapUrl?: string;
 }
 
+export interface CreateProductImageRequest {
+    imageUrl: string; // En este caso simulado será el nombre del archivo
+    isCover: boolean;
+    sortOrder: number;
+    file?: File; // Propiedad auxiliar para el frontend (no va al backend directamente en JSON, pero sirve para lógica local)
+}
+
 // DTO Principal para Crear Producto
 export interface CreateProductRequest {
     name: string;
@@ -53,10 +60,13 @@ export interface CreateProductRequest {
     
     physicalStock: number;
     peopleCapacity: number;
-    providerCost: number; // BigDecimal
 
+    providerCost: number; // BigDecimal
+    referencePrice: number; 
+    
     locationId?: number | null; // Opcional si enviamos newLocation
     newLocation?: CreateLocationRequest | null; // Opcional si enviamos locationId
     
     providerId: number;
+    images: CreateProductImageRequest[];
 }
