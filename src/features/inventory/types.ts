@@ -3,26 +3,30 @@ export interface Product {
     name: string;
     description: string;
     
-    // Category Info
     categoryCode: number;
     categoryName: string;
-    
-    // Stock Info
+
     physicalStock: number;
     availableStock: number;
     peopleCapacity: number;
+    
     providerCost: number;
-    
-    status: boolean;
-    
-    // Location Info (Flattened)
+    referencePrice: number;
+
+    status: boolean; // Estado del producto
+
+    // Info Ubicación
     locationName: string;
     locationAddress: string;
-    locationMapUrl?: string;
+    locationMapUrl: string;
+    locationId?: number;
 
-    // ✅ IDs PARA EDICIÓN (Asegúrate que el Backend los envíe)
-    locationId: number; 
     providerId: number;
+
+    providerStatusCode: number;
+    providerStatusName: string; 
+
+    images: any[]; 
 }
 
 // Para el Patch de estado

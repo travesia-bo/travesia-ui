@@ -2,18 +2,25 @@ import { ReactNode } from "react";
 
 export interface Column<T> {
     header: string;
-    accessorKey?: keyof T; // La clave directa del objeto (ej: 'name')
-    render?: (item: T) => ReactNode; // Render personalizado (ej: botones, badges)
-    className?: string; // Para anchos específicos o alineación
+    accessorKey?: keyof T;
+    render?: (item: T) => ReactNode;
+    className?: string;
 }
 
 interface Props<T> {
     data: T[];
     columns: Column<T>[];
     isLoading?: boolean;
+    rowClassName?: (item: T) => string; // Prop para clases dinámicas
 }
 
-export const TravesiaTable = <T extends { id: number | string }>({ data, columns, isLoading }: Props<T>) => {
+export const TravesiaTable = <T extends { id: number | string }>({ 
+    data, 
+    columns, 
+    isLoading, 
+    rowClassName 
+}: Props<T>) => {
+    
     if (isLoading) {
         return <div className="flex justify-center p-10"><span className="loading loading-spinner loading-lg text-primary"></span></div>;
     }
@@ -33,17 +40,34 @@ export const TravesiaTable = <T extends { id: number | string }>({ data, columns
                     </tr>
                 </thead>
                 <tbody>
-                    {data.map((row) => (
-                        <tr key={row.id} className="hover">
-                            {columns.map((col, idx) => (
-                                <td key={idx} className={col.className}>
-                                    {col.render 
-                                        ? col.render(row) 
-                                        : (col.accessorKey ? String(row[col.accessorKey]) : '-')}
-                                </td>
-                            ))}
-                        </tr>
-                    ))}
+                    {data.map((row) => {
+                        // 1. Obtenemos las clases personalizadas para esta fila
+                        const customClasses = rowClassName ? rowClassName(row) : '';
+                        
+                        // 2. DETECCIÓN INTELIGENTE: 
+                        // Si la clase tiene "bg-", asumimos que queremos pintar el fondo.
+                        // Entonces forzamos a las celdas a heredar ese fondo (!bg-inherit).
+                        const shouldOverrideZebra = customClasses.includes('bg-');
+
+                        return (
+                            <tr 
+                                key={row.id} 
+                                className={`hover transition-colors duration-200 ${customClasses}`}
+                            >
+                                {columns.map((col, idx) => (
+                                    <td 
+                                        key={idx} 
+                                        // 3. APLICAMOS LA TRANSPARENCIA CONDICIONAL AQUÍ
+                                        className={`${col.className} ${shouldOverrideZebra ? '!bg-inherit' : ''}`}
+                                    >
+                                        {col.render 
+                                            ? col.render(row) 
+                                            : (col.accessorKey ? String(row[col.accessorKey]) : '-')}
+                                    </td>
+                                ))}
+                            </tr>
+                        );
+                    })}
                 </tbody>
             </table>
         </div>

@@ -1,21 +1,28 @@
 import { useState, useMemo } from 'react';
-import { useProducts } from '../hooks/useProducts';
-import { useParameters } from '../../../hooks/useParameters'; 
-import { PARAM_CATEGORIES } from '../../../config/constants'; 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { updateProductStatus, deleteProduct } from '../services/productService';
+import { MapPin, Package, Users, Store } from 'lucide-react';
 
+// Hooks y Servicios
+import { useProducts } from '../hooks/useProducts';
+import { useProviders } from '../hooks/useProviders';
+import { useParameters } from '../../../hooks/useParameters'; // ✅ Importar Hook
+import { updateProductStatus, deleteProduct } from '../services/productService';
+import { PARAM_CATEGORIES } from '../../../config/constants'; // ✅ Importar Constante
+import { useToast } from '../../../context/ToastContext';
+
+// UI Components
 import { TravesiaTable, Column } from '../../../components/ui/TravesiaTable';
 import { TravesiaInput } from '../../../components/ui/TravesiaInput';
 import { TravesiaSelect } from '../../../components/ui/TravesiaSelect';
+import { RichSelect } from '../../../components/ui/RichSelect';
 import { CrudButtons, BtnCreate } from '../../../components/ui/CrudButtons';
 import { ConfirmationModal } from '../../../components/ui/ConfirmationModal';
 import { TravesiaBadge } from '../../../components/ui/TravesiaBadge'; 
-import { MapPin, Package, Users } from 'lucide-react';
-import { useToast } from '../../../context/ToastContext';
-import { Product } from '../types';
 import { TravesiaSwitch } from '../../../components/ui/TravesiaSwitch';
 import { ProductFormModal } from '../components/ProductFormModal'; 
+
+// Types
+import { Product } from '../types';
 
 export const ProductsPage = () => {
     const { success, error: toastError } = useToast();
@@ -23,31 +30,41 @@ export const ProductsPage = () => {
 
     // 1. DATA FETCHING
     const { data: products = [], isLoading } = useProducts();
-    
-    // Cargar Categorías
+    const { data: providers = [], isLoading: loadingProviders } = useProviders();
     const { parameters: categories, isLoading: loadingCategories } = useParameters(PARAM_CATEGORIES.PRODUCT_CATEGORY);
+    
+    // ✅ NUEVO: Cargar Estados de Proveedor
+    const { parameters: providerStatuses, isLoading: loadingProviderStatuses } = useParameters(PARAM_CATEGORIES.PROVIDER_STATUS);
 
     // 2. FILTROS LOCALES
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterStatus, setFilterStatus] = useState<string>(''); 
     const [filterCategory, setFilterCategory] = useState<string>(''); 
+    const [filterProvider, setFilterProvider] = useState<number | null>(null);
+    
+    // ✅ NUEVO: Estado para el filtro de Estado Proveedor
+    const [filterProviderStatus, setFilterProviderStatus] = useState<string>('');
 
     const filteredProducts = useMemo(() => {
         return products.filter(p => {
             const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                                   p.categoryName.toLowerCase().includes(searchTerm.toLowerCase());
             
-            const matchesStatus = filterStatus === '' 
-                ? true 
-                : String(p.status) === filterStatus;
-
             const matchesCategory = filterCategory === ''
                 ? true
                 : p.categoryCode === Number(filterCategory);
 
-            return matchesSearch && matchesStatus && matchesCategory;
+            const matchesProvider = filterProvider === null
+                ? true
+                : p.providerId === filterProvider;
+
+            // ✅ NUEVO: Lógica de filtrado por Estado de Proveedor
+            const matchesProviderStatus = filterProviderStatus === ''
+                ? true
+                : p.providerStatusCode === Number(filterProviderStatus);
+
+            return matchesSearch && matchesCategory && matchesProvider && matchesProviderStatus;
         });
-    }, [products, searchTerm, filterStatus, filterCategory]);
+    }, [products, searchTerm, filterCategory, filterProvider, filterProviderStatus]);
 
     // 3. ESTADOS PARA MODALES
     const [isStatusModalOpen, setStatusModalOpen] = useState(false);
@@ -55,7 +72,7 @@ export const ProductsPage = () => {
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
-    // --- LÓGICA RECUPERADA: CAMBIO DE ESTADO ---
+    // --- MUTATIONS ---
     const statusMutation = useMutation({
         mutationFn: ({ id, status }: { id: number; status: boolean }) => updateProductStatus(id, status),
         onSuccess: () => {
@@ -67,6 +84,16 @@ export const ProductsPage = () => {
         onError: () => toastError("Error al cambiar el estado.")
     });
 
+    const deleteMutation = useMutation({
+        mutationFn: deleteProduct,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['products'] });
+            success("Producto eliminado.");
+        },
+        onError: () => toastError("No se pudo eliminar el producto.")
+    });
+
+    // --- HANDLERS ---
     const handleStatusClick = (product: Product) => {
         setProductToToggle(product);
         setStatusModalOpen(true);
@@ -78,7 +105,6 @@ export const ProductsPage = () => {
         }
     };
 
-    // --- LÓGICA RECUPERADA: CREAR / EDITAR ---
     const handleCreate = () => {
         setEditingProduct(null);
         setIsFormModalOpen(true);
@@ -88,16 +114,33 @@ export const ProductsPage = () => {
         setEditingProduct(product);
         setIsFormModalOpen(true);
     };
+    
+    // ✅ LÓGICA DE COLORES POR FILA (CARD VERDE)
+    const getRowClassName = (row: Product) => {
+        const status = row.providerStatusName?.toLowerCase() || '';
+        
+        // 🔴 CANCELADO (Rojo)
+        if (status.includes('cancel') || status.includes('bloquead')) {
+            return '!bg-error/15 hover:!bg-error/25 border-l-4 border-l-error'; 
+        }
+        
+        // ⚫ INACTIVO (Gris)
+        if (status.includes('inactiv')) {
+            return '!bg-base-200/60 hover:!bg-base-200 border-l-4 border-l-base-content/20 text-base-content/50';
+        }
+        
+        // 🟢 CONFIRMADO (Verde - "Card Verda")
+        if (status.includes('confirm')) {
+             return '!bg-success/10 hover:!bg-success/20 border-l-4 border-l-success';
+        }
 
-    // --- LÓGICA: ELIMINAR ---
-    const deleteMutation = useMutation({
-        mutationFn: deleteProduct,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['products'] });
-            success("Producto eliminado.");
-        },
-        onError: () => toastError("No se pudo eliminar el producto.")
-    });
+        // 🟡 PENDIENTE (Amarillo)
+        if (status.includes('pendien')) {
+             return '!bg-warning/15 hover:!bg-warning/25 border-l-4 border-l-warning';
+        }
+
+        return '';
+    };
 
     // 5. DEFINICIÓN DE COLUMNAS
     const columns: Column<Product>[] = [
@@ -143,8 +186,27 @@ export const ProductsPage = () => {
             )
         },
         {
-            header: 'Costo',
-            render: (row) => <span className="font-mono text-sm">Bs. {row.providerCost.toFixed(2)}</span>
+            header: 'Precios (Bs)',
+            render: (row) => (
+                <div className="flex flex-col items-start gap-0.5">
+                    <div className="flex items-center gap-2" title="Precio de Venta al Público">
+                        <span className="badge badge-sm badge-success/10 text-success font-bold border-0 px-1.5 h-5">
+                            Venta
+                        </span>
+                        <span className="font-mono font-bold text-base text-base-content">
+                            {row.referencePrice == null ? '0.00' : row.referencePrice.toFixed(2)}
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-2 opacity-60 text-xs" title="Costo del Proveedor">
+                        <span className="badge badge-sm badge-ghost font-normal px-1.5 h-4 text-[10px]">
+                            Base
+                        </span>
+                        <span className="font-mono">
+                            {row.providerCost == null ? '0.00' : row.providerCost.toFixed(2)}
+                        </span>
+                    </div>
+                </div>
+            )
         },
         {
             header: 'Ubicación',
@@ -159,27 +221,20 @@ export const ProductsPage = () => {
                 </div>
             )
         },
-        // --- COLUMNA ESTADO (ARREGLADA) ---
         {
             header: 'Estado',
             className: 'text-center w-24',
             render: (row) => (
-                // Usamos un div que atrapa el clic y detiene la propagación
                 <div 
                     className="flex flex-col items-center justify-center gap-1 cursor-pointer group"
                     onClick={(e) => {
-                        e.stopPropagation(); // ¡Vital! Evita clicks fantasma
+                        e.stopPropagation();
                         handleStatusClick(row); 
                     }}
                 >
-                    {/* pointer-events-none asegura que el clic lo reciba el div padre */}
                     <div className="pointer-events-none transition-transform group-active:scale-95"> 
-                        <TravesiaSwitch 
-                            checked={row.status}
-                            onChange={() => {}} 
-                        />
+                        <TravesiaSwitch checked={row.status} onChange={() => {}} />
                     </div>
-
                     <span className={`text-[9px] font-bold tracking-wider ${row.status ? 'text-success' : 'text-base-content/40'}`}>
                         {row.status ? 'ACTIVO' : 'INACTIVO'}
                     </span>
@@ -201,7 +256,6 @@ export const ProductsPage = () => {
             )
         }
     ];
-
     
     return (
         <div className="p-6 space-y-6 animate-fade-in">
@@ -209,14 +263,14 @@ export const ProductsPage = () => {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-base-content">Inventario de Productos</h1>
-                    <p className="text-sm text-base-content/60">Gestiona habitaciones, transporte y artículos.</p>
+                    <p className="text-sm text-base-content/60">Gestiona productos, precios y proveedores.</p>
                 </div>
                 <BtnCreate onClick={handleCreate} />
             </div>
 
             {/* Filtros */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-base-100 p-4 rounded-xl shadow-sm border border-base-200">
-                <div className="md:col-span-2">
+                <div className="md:col-span-1">
                     <TravesiaInput 
                         label="Buscar" 
                         placeholder="Nombre..." 
@@ -226,14 +280,11 @@ export const ProductsPage = () => {
                     />
                 </div>
                 
+                {/* Filtro Categoría */}
                 <div>
                     <TravesiaSelect 
                         label="Categoría"
-                        name="categoryFilter"
-                        options={categories.map(cat => ({ 
-                            value: cat.numericCode, 
-                            label: cat.name 
-                        }))}
+                        options={categories.map(cat => ({ value: cat.numericCode, label: cat.name }))}
                         value={filterCategory}
                         onChange={(e) => setFilterCategory(e.target.value)}
                         placeholder="Todas"
@@ -242,29 +293,67 @@ export const ProductsPage = () => {
                     />
                 </div>
 
+                {/* ✅ NUEVO: Filtro Estado Proveedor */}
                 <div>
                     <TravesiaSelect 
-                        label="Estado"
-                        name="statusFilter"
-                        options={[
-                            { value: 'true', label: 'Activos' },
-                            { value: 'false', label: 'Inactivos' }
-                        ]}
-                        value={filterStatus}
-                        onChange={(e) => setFilterStatus(e.target.value)}
+                        label="Estado Proveedor"
+                        options={providerStatuses.map(st => ({ value: st.numericCode, label: st.name }))}
+                        value={filterProviderStatus}
+                        onChange={(e) => setFilterProviderStatus(e.target.value)}
                         placeholder="Todos"
+                        isLoading={loadingProviderStatuses}
                         enableDefaultOption
                     />
+                </div>
+
+                {/* Filtro Proveedor Específico */}
+                <div>
+                    <RichSelect 
+                        label="Proveedor Específico"
+                        placeholder="Filtrar por proveedor..."
+                        isLoading={loadingProviders}
+                        value={filterProvider}
+                        onChange={(val) => setFilterProvider(val ? Number(val) : null)}
+                        // Mapeo Inteligente con Badges
+                        options={providers.map(p => {
+                            const statusLower = p.statusName.toLowerCase();
+                            // Colores de Badge
+                            let badgeClass = "badge-ghost"; // Default
+                            if (statusLower.includes('confirm')) badgeClass = "badge-success text-white";
+                            else if (statusLower.includes('pendien')) badgeClass = "badge-warning text-white";
+                            else if (statusLower.includes('cancel')) badgeClass = "badge-error text-white";
+                            
+                            return {
+                                value: p.id,
+                                label: p.name,
+                                subtitle: p.cityName,
+                                rightContent: (
+                                    <span className={`badge ${badgeClass} text-[9px] font-bold h-5 px-1.5 border-0`}>
+                                        {p.statusName.toUpperCase()}
+                                    </span>
+                                )
+                            };
+                        })}
+                    />
+                    {filterProvider && (
+                        <button 
+                            onClick={() => setFilterProvider(null)}
+                            className="text-[10px] text-primary hover:underline mt-1 ml-1"
+                        >
+                            Ver todos los proveedores
+                        </button>
+                    )}
                 </div>
             </div>
 
             <TravesiaTable 
                 data={filteredProducts} 
                 columns={columns} 
-                isLoading={isLoading} 
+                isLoading={isLoading}
+                rowClassName={getRowClassName} 
             />
 
-            {/* MODAL FORMULARIO */}
+            {/* MODALES */}
             {isFormModalOpen && (
                 <ProductFormModal 
                     isOpen={isFormModalOpen}
@@ -273,7 +362,6 @@ export const ProductsPage = () => {
                 />
             )}
 
-            {/* MODAL CONFIRMACIÓN ESTADO */}
             <ConfirmationModal
                 isOpen={isStatusModalOpen}
                 onClose={() => { setStatusModalOpen(false); setProductToToggle(null); }}

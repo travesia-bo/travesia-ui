@@ -131,6 +131,7 @@ export const ProviderFormModal = ({ isOpen, onClose, providerToEdit }: Props) =>
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['providers'] });
+            queryClient.invalidateQueries({ queryKey: ['products'] });
             const action = providerToEdit ? "actualizado" : "creado";
             success(`Proveedor ${action} correctamente.`);
             onClose();
