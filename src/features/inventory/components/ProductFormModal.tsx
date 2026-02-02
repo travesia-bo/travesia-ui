@@ -23,6 +23,9 @@ import { TravesiaImageUploader, ImageItem } from "../../../components/ui/Travesi
 // Types
 import { CreateProductRequest, Product } from "../types";
 
+import { STORAGE_FOLDERS } from "../../../config/storage";
+import { uploadFile } from "../../shared/services/storageService"; 
+
 interface Props {
     isOpen: boolean;
     onClose: () => void;
@@ -76,6 +79,8 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
         return (Number(watchedCost) || 0) * (Number(watchedStock) || 0);
     }, [watchedCost, watchedStock]);
 
+    const [isUploadingImages, setIsUploadingImages] = useState(false);
+
     // --- EFECTOS ---
     useEffect(() => {
         if (isOpen) {
@@ -103,7 +108,18 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                 } else {
                     setIsCreatingLocation(false);
                 }
-                setLocalImages([]); 
+                // MAPEO DE IMÁGENES EXISTENTES (Del backend al formato local UI)
+                if (productToEdit.images && productToEdit.images.length > 0) {
+                    const existingImages: ImageItem[] = productToEdit.images.map((imgBackend: any) => ({
+                        id: imgBackend.imageUrl, // Usamos la URL como ID
+                        preview: imgBackend.imageUrl, // La URL de Cloudinary
+                        isCover: imgBackend.isCover,
+                        // NO PONEMOS 'file' PORQUE YA EXISTE EN LA NUBE
+                    }));
+                    setLocalImages(existingImages);
+                } else {
+                    setLocalImages([]);
+                } 
 
             } else {
                 // MODO CREAR
@@ -171,8 +187,8 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
             }));
 
             return productToEdit 
-                ? updateProduct(productToEdit.id, payload) 
-                : createProduct(payload);
+                ? updateProduct(productToEdit.id, data) 
+                : createProduct(data);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["products"] });
@@ -180,11 +196,81 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
             success(productToEdit ? "Producto actualizado." : "Producto creado exitosamente.");
             onClose();
         },
-        onError: () => toastError("Error al guardar el producto.")
+        onError: (error: any) => {
+            console.error("Error al guardar:", error);
+            toastError("Error al guardar el producto.");
+            setIsUploadingImages(false); 
+        }
     });
 
-    const onSubmit = (data: CreateProductRequest) => {
-        mutation.mutate(data);
+// --- EL GRAN ORQUESTADOR (onSubmit) ---
+    const onSubmit = async (data: CreateProductRequest) => {
+        setIsUploadingImages(true); // Activar spinner de subida
+
+        try {
+            // 1. Separar imágenes
+            // A) Las que ya tienen URL (vienen del backend o ya se subieron) -> No tienen 'file'
+            // B) Las nuevas (tienen 'file')
+            
+            const processedImages = await Promise.all(localImages.map(async (img, index) => {
+                
+                // CASO A: Imagen ya existente (no se toca)
+                if (!img.file) {
+                    return {
+                        imageUrl: img.preview,
+                        isCover: index === 0, // Recalculamos cover por si cambió el orden
+                        sortOrder: index + 1
+                    };
+                }
+
+                // CASO B: Imagen nueva -> SUBIR A CLOUDINARY
+                try {
+                    // Generamos un nombre base único: "nombre-producto-index-timestamp"
+                    // Esto ayuda a Cloudinary y a tu organización
+                    const cleanProductName = data.name.substring(0, 20); // No usar nombres muy largos
+                    const uniqueSuffix = `${index}-${Date.now()}`;
+                    const fileName = `${cleanProductName}-${uniqueSuffix}`;
+
+                    const cloudUrl = await uploadFile(
+                        img.file, 
+                        STORAGE_FOLDERS.PRODUCTS, 
+                        fileName
+                    );
+
+                    return {
+                        imageUrl: cloudUrl, // ¡Tenemos la URL!
+                        isCover: index === 0,
+                        sortOrder: index + 1
+                    };
+
+                } catch (error) {
+                    console.error("Error subiendo imagen:", img.name, error);
+                    throw new Error(`Error al subir imagen ${img.name}`);
+                }
+            }));
+
+            // 2. Armar el payload final
+            const finalPayload: CreateProductRequest = {
+                ...data,
+                // Reemplazamos las imágenes locales por las procesadas (URLs)
+                images: processedImages
+            };
+            
+            // 3. Ubicación (Lógica existente)
+            if (isCreatingLocation) finalPayload.locationId = null; 
+            else finalPayload.newLocation = null;
+
+            // 4. Enviar a guardar Producto
+            mutation.mutate(finalPayload);
+
+        } catch (error) {
+            console.error(error);
+            toastError("Error al subir las imágenes. Intente de nuevo.");
+            setIsUploadingImages(false);
+        }
+        // Nota: No ponemos setIsUploadingImages(false) aquí al final, 
+        // porque queremos que siga cargando mientras se ejecuta la 'mutation' de guardado de producto.
+        // La mutation.onSuccess o onError lo apagarán (o el modal se cierra).
     };
 
     const modalTitle = (
@@ -202,14 +288,21 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                 {currentStep > 1 && <BtnBack onClick={handleBack} />}
             </div>
             <div className="flex gap-2">
-                <BtnCancel onClick={onClose} />
+                <BtnCancel onClick={onClose} disabled={isUploadingImages || mutation.isPending} />
                 {currentStep < 4 ? (
                     <BtnNext onClick={handleNext} />
                 ) : (
                     <BtnSave 
                         onClick={handleSubmit(onSubmit)} 
-                        isLoading={mutation.isPending} 
-                        label={productToEdit ? "Guardar Cambios" : "Crear Producto"}
+                        // MOSTRAR ESTADO REAL AL USUARIO
+                        isLoading={isUploadingImages || mutation.isPending} 
+                        label={
+                            isUploadingImages 
+                                ? "Subiendo imágenes..." 
+                                : mutation.isPending 
+                                    ? "Guardando..." 
+                                    : "Guardar"
+                        }
                     />
                 )}
             </div>
@@ -275,7 +368,7 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                             <Store size={14}/> Datos de Compra (Proveedor)
                         </h4>
                         
-<RichSelect
+                        <RichSelect
                             label="Proveedor"
                             placeholder="Buscar Proveedor..."
                             isLoading={loadingProviders}

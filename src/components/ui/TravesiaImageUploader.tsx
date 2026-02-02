@@ -1,10 +1,13 @@
 import { useRef } from "react";
-import { ImagePlus, X, Star, ArrowUp, ArrowDown } from "lucide-react";
+import { ImagePlus, X, Star, ArrowUp, ArrowDown, AlertTriangle } from "lucide-react";
+import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB, ALLOWED_IMAGE_TYPES } from "../../config/storage";
 
 export interface ImageItem {
-    id: string; // URL temporal o ID único
-    file: File;
+    id: string; // Para keys de React (puede ser la URL o un UUID temporal)
+    preview: string; // Lo que mostramos en la etiqueta <img>
+    file?: File; // Si existe, es NUEVA. Si no existe, es del SERVIDOR.
     isCover: boolean;
+    name?: string; // Nombre para mostrar en UI
 }
 
 interface Props {
@@ -17,30 +20,45 @@ interface Props {
 export const TravesiaImageUploader = ({ images, onChange, error, shakeKey }: Props) => {
     const inputRef = useRef<HTMLInputElement>(null);
 
-    // Manejar selección de archivos
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
-            const newFiles = Array.from(e.target.files);
-            
-            const newImageItems: ImageItem[] = newFiles.map(file => ({
-                id: URL.createObjectURL(file), // Preview URL
-                file,
-                isCover: false // Se recalcula luego
-            }));
+            const files = Array.from(e.target.files);
+            const validNewItems: ImageItem[] = [];
 
-            // Combinar con existentes
-            const updatedList = [...images, ...newImageItems];
+            files.forEach(file => {
+                // 1. Validar Tipo
+                if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+                    alert(`El archivo "${file.name}" no es una imagen válida.`);
+                    return;
+                }
+
+                // 2. Validar Tamaño
+                if (file.size > MAX_FILE_SIZE_BYTES) {
+                    alert(`El archivo "${file.name}" supera el límite de ${MAX_FILE_SIZE_MB}MB.`);
+                    return;
+                }
+
+                // Crear objeto local
+                validNewItems.push({
+                    id: URL.createObjectURL(file), // URL temporal del navegador
+                    preview: URL.createObjectURL(file),
+                    file: file, // Guardamos el archivo para subirlo luego
+                    isCover: false,
+                    name: file.name
+                });
+            });
+
+            const updatedList = [...images, ...validNewItems];
             updateListState(updatedList);
         }
-        // Reset input para permitir seleccionar el mismo archivo si se borró
+        // Reset input para permitir subir el mismo archivo si se borró
         if (inputRef.current) inputRef.current.value = "";
     };
 
-    // Actualizar estado asegurando que el primero siempre es Cover
     const updateListState = (list: ImageItem[]) => {
         const validatedList = list.map((img, index) => ({
             ...img,
-            isCover: index === 0 // Regla de negocio: El primero siempre es Cover
+            isCover: index === 0 // El primero siempre es cover
         }));
         onChange(validatedList);
     };
@@ -57,10 +75,20 @@ export const TravesiaImageUploader = ({ images, onChange, error, shakeKey }: Pro
 
         const newList = [...images];
         const targetIndex = direction === 'up' ? index - 1 : index + 1;
-        
-        // Intercambiar
         [newList[index], newList[targetIndex]] = [newList[targetIndex], newList[index]];
         updateListState(newList);
+    };
+
+    // Helper para mostrar nombres bonitos
+    const getDisplayName = (img: ImageItem) => {
+        if (img.name) return img.name;
+        // Si es URL de Cloudinary, intentamos sacar el nombre final
+        try {
+            const parts = img.preview.split('/');
+            return parts[parts.length - 1]; // "mifoto.jpg"
+        } catch {
+            return "Imagen guardada";
+        }
     };
 
     return (
@@ -77,7 +105,7 @@ export const TravesiaImageUploader = ({ images, onChange, error, shakeKey }: Pro
                     ref={inputRef}
                     type="file" 
                     multiple 
-                    accept="image/*" 
+                    accept={ALLOWED_IMAGE_TYPES.join(',')} // Filtro nativo del OS
                     className="hidden" 
                     onChange={handleFileSelect}
                 />
@@ -85,7 +113,9 @@ export const TravesiaImageUploader = ({ images, onChange, error, shakeKey }: Pro
                     <ImagePlus size={24} className="text-base-content/60" />
                 </div>
                 <p className="font-medium text-sm">Click para seleccionar imágenes</p>
-                <p className="text-xs text-base-content/50 mt-1">Soporta JPG, PNG, WEBP</p>
+                <p className="text-xs text-base-content/50 mt-1">
+                    Máx. {MAX_FILE_SIZE_MB}MB • JPG, PNG, WEBP
+                </p>
             </div>
 
             {error && <p className="text-xs text-error font-medium">{error}</p>}
@@ -97,20 +127,28 @@ export const TravesiaImageUploader = ({ images, onChange, error, shakeKey }: Pro
                         
                         {/* Preview */}
                         <div className="relative w-16 h-16 shrink-0 rounded-md overflow-hidden bg-base-300">
-                            <img src={img.id} alt="preview" className="w-full h-full object-cover" />
+                            <img src={img.preview} alt="preview" className="w-full h-full object-cover" />
                         </div>
 
                         {/* Info */}
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold truncate">{img.file.name}</p>
-                            <p className="text-xs text-base-content/60">
-                                {(img.file.size / 1024).toFixed(1)} KB
+                            <p className="text-sm font-bold truncate" title={getDisplayName(img)}>
+                                {getDisplayName(img)}
                             </p>
-                            {img.isCover && (
-                                <span className="badge badge-primary badge-xs mt-1 gap-1">
-                                    <Star size={8} fill="currentColor" /> PORTADA
-                                </span>
-                            )}
+                            
+                            <div className="flex gap-2 mt-1">
+                                {img.file ? (
+                                    <span className="badge badge-warning badge-xs opacity-70">NUEVA</span>
+                                ) : (
+                                    <span className="badge badge-ghost badge-xs opacity-50">GUARDADA</span>
+                                )}
+                                
+                                {img.isCover && (
+                                    <span className="badge badge-primary badge-xs gap-1">
+                                        <Star size={8} fill="currentColor" /> PORTADA
+                                    </span>
+                                )}
+                            </div>
                         </div>
 
                         {/* Controles de Orden */}
@@ -143,12 +181,6 @@ export const TravesiaImageUploader = ({ images, onChange, error, shakeKey }: Pro
                         </button>
                     </div>
                 ))}
-                
-                {images.length > 0 && (
-                    <p className="text-xs text-center text-base-content/40 mt-2">
-                        La primera imagen de la lista será la portada del producto.
-                    </p>
-                )}
             </div>
         </div>
     );

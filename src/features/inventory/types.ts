@@ -26,7 +26,7 @@ export interface Product {
     providerStatusCode: number;
     providerStatusName: string; 
 
-    images: any[]; 
+    images: CreateProductImageRequest[];
 }
 
 // Para el Patch de estado
