@@ -180,15 +180,9 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
             if (isCreatingLocation) payload.locationId = null; 
             else payload.newLocation = null;
 
-            payload.images = localImages.map((img, index) => ({
-                imageUrl: img.file.name,
-                isCover: img.isCover,
-                sortOrder: index + 1
-            }));
-
             return productToEdit 
-                ? updateProduct(productToEdit.id, data) 
-                : createProduct(data);
+                ? updateProduct(productToEdit.id, payload) 
+                : createProduct(payload);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["products"] });
