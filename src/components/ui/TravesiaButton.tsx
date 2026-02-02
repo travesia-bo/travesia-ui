@@ -2,9 +2,10 @@ import React from "react";
 
 // Agregamos las nuevas variantes a la lista
 type ButtonVariant = 
-  | "primary" | "secondary" | "neutral" | "ghost" 
+  | "primary" | "secondary" | "neutral" | "ghost" | "white"
   | "save" | "delete" | "cancel" | "edit" // CRUD Básico
   | "excel" | "pdf" // Reportes
+  | "overlay"
   | "success" | "error" | "warning" | "info" | "create" | "steps"; 
 
 interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -47,6 +48,12 @@ export const TravesiaButton = ({
       // Defaults de DaisyUI
       case "neutral": return "btn-neutral text-white";
       case "ghost": return "btn-travesia-ghost text-white"; 
+
+      case "white": return "bg-white text-base-content hover:bg-gray-100 border-none"; 
+      case "overlay": return "bg-black/40 hover:bg-black/60 text-white border-none backdrop-blur-[2px] shadow-sm";
+      case "error": return "btn-error text-white"; 
+      case "warning": return "btn-warning text-white";
+      case "success": return "btn-success text-white";
       default: return "btn-travesia-primary text-white";
     }
   };

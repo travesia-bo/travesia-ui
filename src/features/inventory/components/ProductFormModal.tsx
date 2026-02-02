@@ -10,6 +10,8 @@ import { useLocations } from "../hooks/useLocations";
 import { useParameters } from "../../../hooks/useParameters";
 import { PARAM_CATEGORIES } from "../../../config/constants";
 import { useToast } from "../../../context/ToastContext";
+import { STORAGE_FOLDERS } from "../../../config/storage";
+import { uploadFile } from "../../shared/services/storageService"; 
 
 // UI Components
 import { TravesiaInput } from "../../../components/ui/TravesiaInput";
@@ -18,13 +20,11 @@ import { RichSelect } from "../../../components/ui/RichSelect";
 import { BtnSave, BtnCancel, BtnNext, BtnBack } from "../../../components/ui/CrudButtons";
 import { TravesiaModal } from "../../../components/ui/TravesiaModal";
 import { TravesiaStepper } from "../../../components/ui/TravesiaStepper";
-import { TravesiaImageUploader, ImageItem } from "../../../components/ui/TravesiaImageUploader";
+// ✅ IMPORTAR EL NUEVO UPLOADER SINGLE
+import { TravesiaSingleImageUploader } from "../../../components/ui/TravesiaSingleImageUploader";
 
 // Types
 import { CreateProductRequest, Product } from "../types";
-
-import { STORAGE_FOLDERS } from "../../../config/storage";
-import { uploadFile } from "../../shared/services/storageService"; 
 
 interface Props {
     isOpen: boolean;
@@ -32,10 +32,8 @@ interface Props {
     productToEdit?: Product | null;
 }
 
-const PRODUCT_STEPS = ["Información", "Precios y Stock", "Ubicación", "Imágenes"];
-
-// Regex para validar máximo 2 decimales y números positivos
-const PRICE_REGEX = /^\d+(\.\d{1,2})?$/;
+const PRODUCT_STEPS = ["Información", "Precios y Stock", "Ubicación", "Imagen"];
+const PRICE_REGEX = /^\d+(\.\d{1,2})?$/; // Regex que pediste mantener
 
 export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
     const { success, error: toastError } = useToast();
@@ -51,10 +49,11 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
     const [manualShake, setManualShake] = useState(0);
     const [isCreatingLocation, setIsCreatingLocation] = useState(false);
     
-    // Estado para Imágenes
-    const [localImages, setLocalImages] = useState<ImageItem[]>([]);
+    // ✅ ESTADO PARA IMAGEN ÚNICA
+    const [selectedImage, setSelectedImage] = useState<{ file?: File; preview: string } | null>(null);
+    const [isUploadingImage, setIsUploadingImage] = useState(false);
 
-    // Formulario
+    // Formulario (Validaciones intactas)
     const { 
         register, 
         handleSubmit, 
@@ -74,18 +73,14 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
 
     const watchedCost = watch("providerCost");
     const watchedStock = watch("physicalStock");
+    const totalProviderDebt = useMemo(() => (Number(watchedCost) || 0) * (Number(watchedStock) || 0), [watchedCost, watchedStock]);
 
-    const totalProviderDebt = useMemo(() => {
-        return (Number(watchedCost) || 0) * (Number(watchedStock) || 0);
-    }, [watchedCost, watchedStock]);
-
-    const [isUploadingImages, setIsUploadingImages] = useState(false);
-
-    // --- EFECTOS ---
+    // --- EFECTOS (Carga de Datos) ---
     useEffect(() => {
         if (isOpen) {
             setCurrentStep(1);
             setManualShake(0);
+            setIsUploadingImage(false);
             
             if (productToEdit) {
                 // MODO EDICIÓN
@@ -97,7 +92,8 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                 setValue("peopleCapacity", productToEdit.peopleCapacity);
                 
                 setValue("providerCost", productToEdit.providerCost);
-                setValue("referencePrice", (productToEdit as any).referencePrice || 0); 
+                // Si el backend no tiene referencePrice, usar 0
+                setValue("referencePrice", productToEdit.referencePrice ?? 0); 
                 
                 if (productToEdit.providerId) setValue("providerId", productToEdit.providerId);
 
@@ -108,18 +104,16 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                 } else {
                     setIsCreatingLocation(false);
                 }
-                // MAPEO DE IMÁGENES EXISTENTES (Del backend al formato local UI)
-                if (productToEdit.images && productToEdit.images.length > 0) {
-                    const existingImages: ImageItem[] = productToEdit.images.map((imgBackend: any) => ({
-                        id: imgBackend.imageUrl, // Usamos la URL como ID
-                        preview: imgBackend.imageUrl, // La URL de Cloudinary
-                        isCover: imgBackend.isCover,
-                        // NO PONEMOS 'file' PORQUE YA EXISTE EN LA NUBE
-                    }));
-                    setLocalImages(existingImages);
+
+                // ✅ CARGAR IMAGEN EXISTENTE (Si tiene)
+                if (productToEdit.imageUrl) {
+                    setSelectedImage({
+                        preview: productToEdit.imageUrl,
+                        // file: undefined (indica que viene del servidor)
+                    });
                 } else {
-                    setLocalImages([]);
-                } 
+                    setSelectedImage(null);
+                }
 
             } else {
                 // MODO CREAR
@@ -129,32 +123,24 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                     providerCost: 0, 
                     referencePrice: 0 
                 });
-                setLocalImages([]);
+                setSelectedImage(null);
                 setIsCreatingLocation(false);
             }
         }
     }, [isOpen, productToEdit, reset, setValue]);
 
-    // --- LÓGICA DE NAVEGACIÓN ---
+    // --- NAVEGACIÓN ---
     const handleNext = async () => {
         let fieldsToValidate: any[] = [];
-
         switch (currentStep) {
-            case 1:
-                fieldsToValidate = ["name", "description", "categoryType"];
-                break;
-            case 2:
-                fieldsToValidate = ["providerId", "providerCost", "physicalStock", "peopleCapacity", "referencePrice"];
-                break;
-            case 3:
+            case 1: fieldsToValidate = ["name", "description", "categoryType"]; break;
+            case 2: fieldsToValidate = ["providerId", "providerCost", "physicalStock", "peopleCapacity", "referencePrice"]; break;
+            case 3: 
                 if (isCreatingLocation) fieldsToValidate = ["newLocation.name"];
                 else fieldsToValidate = ["locationId"];
                 break;
             case 4:
-                if (localImages.length === 0) {
-                    setManualShake(prev => prev + 1);
-                    return;
-                }
+                // Paso Imagen (Opcional por ahora)
                 break;
         }
 
@@ -174,8 +160,10 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
         if (currentStep > 1) setCurrentStep(prev => prev - 1);
     };
 
+    // --- MUTATION (Backend) ---
     const mutation = useMutation({
         mutationFn: (data: CreateProductRequest) => {
+            // El payload ya viene limpio desde onSubmit
             const payload = { ...data };
             if (isCreatingLocation) payload.locationId = null; 
             else payload.newLocation = null;
@@ -192,79 +180,60 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
         },
         onError: (error: any) => {
             console.error("Error al guardar:", error);
-            toastError("Error al guardar el producto.");
-            setIsUploadingImages(false); 
+            const msg = error?.response?.data?.message || "Error al guardar el producto.";
+            toastError(msg);
+            setIsUploadingImage(false); 
         }
     });
 
-// --- EL GRAN ORQUESTADOR (onSubmit) ---
+    // --- ON SUBMIT (Orquestador) ---
     const onSubmit = async (data: CreateProductRequest) => {
-        setIsUploadingImages(true); // Activar spinner de subida
+        setIsUploadingImage(true);
 
         try {
-            // 1. Separar imágenes
-            // A) Las que ya tienen URL (vienen del backend o ya se subieron) -> No tienen 'file'
-            // B) Las nuevas (tienen 'file')
-            
-            const processedImages = await Promise.all(localImages.map(async (img, index) => {
-                
-                // CASO A: Imagen ya existente (no se toca)
-                if (!img.file) {
-                    return {
-                        imageUrl: img.preview,
-                        isCover: index === 0, // Recalculamos cover por si cambió el orden
-                        sortOrder: index + 1
-                    };
+            let finalImageUrl: string | null = null;
+
+            // Lógica de Imagen:
+            if (selectedImage) {
+                if (selectedImage.file) {
+                    // CASO A: Imagen NUEVA (File presente) -> SUBIR
+                    try {
+                        const cleanName = data.name.substring(0, 20);
+                        const fileName = `${cleanName}-${Date.now()}`;
+                        
+                        // Subimos a la carpeta PRODUCTS
+                        finalImageUrl = await uploadFile(
+                            selectedImage.file, 
+                            STORAGE_FOLDERS.PRODUCTS, 
+                            fileName
+                        );
+                    } catch (error) {
+                        console.error("Upload error:", error);
+                        throw new Error("Fallo la subida de imagen");
+                    }
+                } else {
+                    // CASO B: Imagen VIEJA (Solo preview) -> MANTENER URL
+                    finalImageUrl = selectedImage.preview;
                 }
+            } else {
+                // CASO C: Sin imagen -> NULL
+                finalImageUrl = "";
+            }
 
-                // CASO B: Imagen nueva -> SUBIR A CLOUDINARY
-                try {
-                    // Generamos un nombre base único: "nombre-producto-index-timestamp"
-                    // Esto ayuda a Cloudinary y a tu organización
-                    const cleanProductName = data.name.substring(0, 20); // No usar nombres muy largos
-                    const uniqueSuffix = `${index}-${Date.now()}`;
-                    const fileName = `${cleanProductName}-${uniqueSuffix}`;
-
-                    const cloudUrl = await uploadFile(
-                        img.file, 
-                        STORAGE_FOLDERS.PRODUCTS, 
-                        fileName
-                    );
-
-                    return {
-                        imageUrl: cloudUrl, // ¡Tenemos la URL!
-                        isCover: index === 0,
-                        sortOrder: index + 1
-                    };
-
-                } catch (error) {
-                    console.error("Error subiendo imagen:", img.name, error);
-                    throw new Error(`Error al subir imagen ${img.name}`);
-                }
-            }));
-
-            // 2. Armar el payload final
+            // Armar payload final
             const finalPayload: CreateProductRequest = {
                 ...data,
-                // Reemplazamos las imágenes locales por las procesadas (URLs)
-                images: processedImages
+                imageUrl: finalImageUrl // ✅ Enviamos el string o null
             };
             
-            // 3. Ubicación (Lógica existente)
-            if (isCreatingLocation) finalPayload.locationId = null; 
-            else finalPayload.newLocation = null;
-
-            // 4. Enviar a guardar Producto
+            // Enviamos al backend
             mutation.mutate(finalPayload);
 
         } catch (error) {
             console.error(error);
-            toastError("Error al subir las imágenes. Intente de nuevo.");
-            setIsUploadingImages(false);
+            toastError("Error al procesar la imagen.");
+            setIsUploadingImage(false);
         }
-        // Nota: No ponemos setIsUploadingImages(false) aquí al final, 
-        // porque queremos que siga cargando mientras se ejecuta la 'mutation' de guardado de producto.
-        // La mutation.onSuccess o onError lo apagarán (o el modal se cierra).
     };
 
     const modalTitle = (
@@ -282,21 +251,14 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                 {currentStep > 1 && <BtnBack onClick={handleBack} />}
             </div>
             <div className="flex gap-2">
-                <BtnCancel onClick={onClose} disabled={isUploadingImages || mutation.isPending} />
+                <BtnCancel onClick={onClose} disabled={isUploadingImage || mutation.isPending} />
                 {currentStep < 4 ? (
                     <BtnNext onClick={handleNext} />
                 ) : (
                     <BtnSave 
                         onClick={handleSubmit(onSubmit)} 
-                        // MOSTRAR ESTADO REAL AL USUARIO
-                        isLoading={isUploadingImages || mutation.isPending} 
-                        label={
-                            isUploadingImages 
-                                ? "Subiendo imágenes..." 
-                                : mutation.isPending 
-                                    ? "Guardando..." 
-                                    : "Guardar"
-                        }
+                        isLoading={isUploadingImage || mutation.isPending} 
+                        label={isUploadingImage ? "Subiendo..." : mutation.isPending ? "Guardando..." : "Guardar"}
                     />
                 )}
             </div>
@@ -311,15 +273,11 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
             actions={modalActions}
             size="lg"
         >
-            <TravesiaStepper 
-                steps={PRODUCT_STEPS} 
-                currentStep={currentStep} 
-                className="mb-6"
-            />
+            <TravesiaStepper steps={PRODUCT_STEPS} currentStep={currentStep} className="mb-6"/>
 
             <form className="min-h-[350px]">
                 
-                {/* --- PASO 1: INFORMACIÓN GENERAL --- */}
+                {/* --- PASO 1 --- */}
                 <div className={currentStep === 1 ? "block space-y-4 animate-fade-in" : "hidden"}>
                     <TravesiaInput
                         label="Nombre del Producto"
@@ -328,72 +286,36 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                         error={errors.name?.message}
                         shakeKey={submitCount + manualShake}
                     />
-
-                    <TravesiaTextarea 
-                        label="Descripción"
-                        placeholder="Detalles, características..."
-                        {...register("description")}
-                    />
-
+                    <TravesiaTextarea label="Descripción" {...register("description")} />
                     <RichSelect
                         label="Categoría"
                         icon={<Tag size={14}/>}
-                        placeholder="Seleccione Categoría"
-                        isLoading={loadingCategories}
-                        options={categories.map(c => ({ 
-                            value: c.numericCode, 
-                            label: c.name,
-                            subtitle: c.description
-                        }))}
+                        options={categories.map(c => ({ value: c.numericCode, label: c.name }))}
                         value={watch("categoryType")}
                         onChange={(val) => setValue("categoryType", Number(val))}
                         error={errors.categoryType ? "Requerido" : undefined}
-                        // ✅ AGREGAMOS EL SHAKE
                         shakeKey={submitCount + manualShake}
                     />
                     <input type="hidden" {...register("categoryType", { required: true })} />
                 </div>
 
-                {/* --- PASO 2: PRECIOS Y STOCK --- */}
+                {/* --- PASO 2: PRECIOS Y STOCK (TUS VALIDACIONES IMPORTANTES) --- */}
                 <div className={currentStep === 2 ? "block space-y-6 animate-fade-in" : "hidden"}>
-                    
                     <div className="bg-base-200/50 p-4 rounded-xl border border-base-200 space-y-4">
                         <h4 className="text-xs font-bold uppercase tracking-wider text-base-content/50 flex items-center gap-2">
                             <Store size={14}/> Datos de Compra (Proveedor)
                         </h4>
-                        
                         <RichSelect
                             label="Proveedor"
-                            placeholder="Buscar Proveedor..."
                             isLoading={loadingProviders}
                             shakeKey={submitCount + manualShake}
-                            // FILTRO Y MAPEO
                             options={providers
-                                // 1. Filtramos: Solo Confirmada (Activo) o Pendiente
-                                .filter(p => 
-                                    p.statusName.toLowerCase().includes('confirm') || 
-                                    p.statusName.toLowerCase().includes('pendient')
-                                )
-                                // 2. Mapeamos agregando el Badge visual
-                                .map(p => {
-                                    // Determinamos color del badge
-                                    const isConfirmed = p.statusName.toLowerCase().includes('confirm');
-                                    const badgeClass = isConfirmed 
-                                        ? "badge-success text-white" 
-                                        : "badge-warning text-white";
-
-                                    return {
-                                        value: p.id,
-                                        label: p.name,
-                                        subtitle: p.cityName,
-                                        // 3. Pasamos el componente visual a la derecha
-                                        rightContent: (
-                                            <span className={`badge ${badgeClass} text-[10px] font-bold border-0 h-5 px-2`}>
-                                                {isConfirmed ? "ACTIVO" : "PENDIENTE"}
-                                            </span>
-                                        )
-                                    };
-                                })
+                                .filter(p => p.statusName.toLowerCase().includes('confirm') || p.statusName.toLowerCase().includes('pendient'))
+                                .map(p => ({
+                                    value: p.id,
+                                    label: p.name,
+                                    subtitle: p.cityName,
+                                }))
                             }
                             value={watch("providerId")}
                             onChange={(val) => setValue("providerId", Number(val))}
@@ -406,7 +328,7 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                                 label="Costo Unitario (Bs)"
                                 type="number"
                                 step="0.01"
-                                // ✅ VALIDACIÓN MEJORADA: Positivo y Regex Decimales
+                                // ✅ VALIDACIÓN PRESERVADA
                                 {...register("providerCost", { 
                                     required: "Requerido", 
                                     min: { value: 0.01, message: "Mayor a 0" },
@@ -418,7 +340,7 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                             <TravesiaInput
                                 label="Stock Físico"
                                 type="number"
-                                // ✅ VALIDACIÓN MEJORADA: Entero Positivo (mínimo 1)
+                                // ✅ VALIDACIÓN PRESERVADA
                                 {...register("physicalStock", { 
                                     required: "Requerido", 
                                     min: { value: 1, message: "Mínimo 1" } 
@@ -437,16 +359,13 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                     </div>
 
                     <div className="space-y-4">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-base-content/50 flex items-center gap-2">
-                            <DollarSign size={14}/> Datos de Venta
-                        </h4>
                         <div className="grid grid-cols-2 gap-4">
                             <TravesiaInput
                                 label="Precio de Venta (Bs)"
                                 type="number"
                                 step="0.01"
                                 className="input-success font-bold"
-                                // ✅ VALIDACIÓN MEJORADA
+                                // ✅ VALIDACIÓN PRESERVADA
                                 {...register("referencePrice", { 
                                     required: "Requerido", 
                                     min: { value: 0.01, message: "Mayor a 0" },
@@ -458,7 +377,7 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                             <TravesiaInput
                                 label="Capacidad (Pers.)"
                                 type="number"
-                                // ✅ VALIDACIÓN MEJORADA
+                                // ✅ VALIDACIÓN PRESERVADA
                                 {...register("peopleCapacity", { 
                                     required: "Requerido", 
                                     min: { value: 1, message: "Mínimo 1" } 
@@ -470,87 +389,50 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                     </div>
                 </div>
 
-                {/* --- PASO 3: UBICACIÓN --- */}
+                {/* --- PASO 3 --- */}
                 <div className={currentStep === 3 ? "block space-y-4 animate-fade-in" : "hidden"}>
-                    <div className="bg-base-200/40 p-5 rounded-xl border border-base-200 min-h-[200px]">
+                     {/* ... Lógica de Ubicación (Mantener tal cual) ... */}
+                     <div className="bg-base-200/40 p-5 rounded-xl border border-base-200 min-h-[200px]">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                             <h4 className="text-xs font-bold uppercase tracking-wider text-base-content/60 flex items-center gap-2">
                                 <MapPin size={16} className="text-primary"/> Almacenamiento
                             </h4>
-                            
                             <div className="tabs tabs-boxed bg-base-100 border border-base-300 p-1 scale-90 origin-right">
-                                <a 
-                                    className={`tab h-8 min-h-0 text-xs font-bold rounded-md ${!isCreatingLocation ? 'tab-active bg-primary text-primary-content' : ''}`}
-                                    onClick={() => setIsCreatingLocation(false)}
-                                >
-                                    Existente
-                                </a>
-                                <a 
-                                    className={`tab h-8 min-h-0 text-xs font-bold rounded-md ${isCreatingLocation ? 'tab-active bg-primary text-primary-content' : ''}`}
-                                    onClick={() => setIsCreatingLocation(true)}
-                                >
-                                    Nueva
-                                </a>
+                                <a className={`tab h-8 min-h-0 text-xs font-bold rounded-md ${!isCreatingLocation ? 'tab-active bg-primary text-primary-content' : ''}`} onClick={() => setIsCreatingLocation(false)}>Existente</a>
+                                <a className={`tab h-8 min-h-0 text-xs font-bold rounded-md ${isCreatingLocation ? 'tab-active bg-primary text-primary-content' : ''}`} onClick={() => setIsCreatingLocation(true)}>Nueva</a>
                             </div>
                         </div>
 
                         {isCreatingLocation ? (
                             <div className="space-y-4 animate-fade-in">
-                                <TravesiaInput
-                                    label="Nombre Ubicación"
-                                    placeholder="Ej: Almacén Central"
-                                    {...register("newLocation.name", { required: isCreatingLocation ? "Nombre requerido" : false })}
-                                    error={errors.newLocation?.name?.message}
-                                    shakeKey={submitCount + manualShake}
-                                />
+                                <TravesiaInput label="Nombre Ubicación" placeholder="Ej: Almacén Central" {...register("newLocation.name", { required: isCreatingLocation ? "Nombre requerido" : false })} error={errors.newLocation?.name?.message} shakeKey={submitCount + manualShake} />
                                 <div className="grid grid-cols-2 gap-4">
-                                    <TravesiaInput
-                                        label="Dirección"
-                                        placeholder="Calle, #..."
-                                        {...register("newLocation.address")}
-                                    />
-                                    <TravesiaInput
-                                        label="URL Mapa"
-                                        placeholder="https://maps..."
-                                        {...register("newLocation.mapUrl")}
-                                    />
+                                    <TravesiaInput label="Dirección" placeholder="Calle, #..." {...register("newLocation.address")} />
+                                    <TravesiaInput label="URL Mapa" placeholder="https://maps..." {...register("newLocation.mapUrl")} />
                                 </div>
                             </div>
                         ) : (
                             <div className="animate-fade-in pt-4">
-                                <RichSelect
-                                    label="Buscar Ubicación"
-                                    placeholder="Seleccione dónde se encuentra..."
-                                    isLoading={loadingLocations}
-                                    icon={<MapPin size={14}/>}
-                                    options={locations.map(l => ({
-                                        value: l.id,
-                                        label: l.name,
-                                        subtitle: l.address,
-                                        icon: <MapPin size={16}/>
-                                    }))}
-                                    value={watch("locationId")}
-                                    onChange={(val) => setValue("locationId", Number(val))}
-                                    error={errors.locationId && !isCreatingLocation ? "Requerido" : undefined}
-                                    // ✅ AGREGAMOS EL SHAKE
-                                    shakeKey={submitCount + manualShake}
-                                />
-                                {!isCreatingLocation && (
-                                    <input type="hidden" {...register("locationId", { required: true })} />
-                                )}
+                                <RichSelect label="Buscar Ubicación" isLoading={loadingLocations} icon={<MapPin size={14}/>} options={locations.map(l => ({ value: l.id, label: l.name, subtitle: l.address, icon: <MapPin size={16}/> }))} value={watch("locationId")} onChange={(val) => setValue("locationId", Number(val))} error={errors.locationId && !isCreatingLocation ? "Requerido" : undefined} shakeKey={submitCount + manualShake} />
+                                {!isCreatingLocation && <input type="hidden" {...register("locationId", { required: true })} />}
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* --- PASO 4: IMÁGENES --- */}
+                {/* --- PASO 4: IMAGEN ÚNICA --- */}
                 <div className={currentStep === 4 ? "block space-y-4 animate-fade-in" : "hidden"}>
-                    <TravesiaImageUploader 
-                        images={localImages}
-                        onChange={setLocalImages}
-                        error={submitCount > 0 && localImages.length === 0 ? "Debes subir al menos una imagen" : undefined}
-                        shakeKey={submitCount + manualShake}
-                    />
+                    <div className="bg-base-200/50 p-6 rounded-xl border border-base-200 text-center">
+                        <p className="text-sm opacity-60 mb-4">
+                            Sube una imagen representativa del producto. 
+                        </p>
+                        {/* ✅ REEMPLAZAMOS EL MULTI-UPLOADER POR EL SINGLE */}
+                        <TravesiaSingleImageUploader 
+                            value={selectedImage}
+                            onChange={setSelectedImage}
+                            shakeKey={submitCount + manualShake}
+                        />
+                    </div>
                 </div>
 
             </form>

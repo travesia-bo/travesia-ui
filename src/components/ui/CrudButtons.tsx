@@ -1,4 +1,4 @@
-import { Save, X, Trash2, Pencil, FileSpreadsheet, FileText, Plus, ArrowLeft, ArrowRight } from "lucide-react";
+import { Save, X, Trash2, Pencil, FileSpreadsheet, FileText, Plus, ArrowLeft, ArrowRight, RefreshCw } from "lucide-react";
 import { TravesiaButton } from "./TravesiaButton";
 
 // Tipos para pasar props extra (como onClick)
@@ -130,6 +130,24 @@ export const BtnModalNo = ({ label = "No, Cancelar", ...props }: BaseBtnProps) =
     />
 );
 
+/**
+ * 11. COMPONENTE AGRUPADOR PARA TABLAS
+ * Este es el que faltaba y causaba el error de importación.
+ */
+interface CrudButtonsProps {
+    onEdit: () => void;
+    onDelete: () => void;
+}
+
+export const CrudButtons = ({ onEdit, onDelete }: CrudButtonsProps) => {
+    return (
+        <div className="flex justify-end gap-2">
+            <BtnEdit onClick={onEdit} />
+            <BtnDeleteIcon onClick={onDelete} />
+        </div>
+    );
+};
+
 // 13. BOTÓN ATRÁS (Ghost + Flecha Izquierda) - Para Wizards
 export const BtnBack = ({ label = "Atrás", responsive = true, ...props }: BaseBtnProps) => (
     <TravesiaButton 
@@ -155,20 +173,24 @@ export const BtnNext = ({ label = "Siguiente", responsive = true, ...props }: Ba
     />
 );
 
-/**
- * 11. COMPONENTE AGRUPADOR PARA TABLAS
- * Este es el que faltaba y causaba el error de importación.
- */
-interface CrudButtonsProps {
-    onEdit: () => void;
-    onDelete: () => void;
-}
+// 15. BOTÓN CAMBIAR (Blanco, ideal para overlays de imágenes)
+export const BtnChange = ({ label = "Cambiar", responsive = true, ...props }: BaseBtnProps) => (
+    <TravesiaButton 
+        variant="overlay" 
+        label={label} 
+        icon={<RefreshCw size={16} />} 
+        responsive={responsive}
+        {...props} 
+    />
+);
 
-export const CrudButtons = ({ onEdit, onDelete }: CrudButtonsProps) => {
-    return (
-        <div className="flex justify-end gap-2">
-            <BtnEdit onClick={onEdit} />
-            <BtnDeleteIcon onClick={onDelete} />
-        </div>
-    );
-};
+// 16. BOTÓN QUITAR (Rojo Error + X, para quitar de una lista o uploader)
+export const BtnRemove = ({ label = "Quitar", responsive = true, ...props }: BaseBtnProps) => (
+    <TravesiaButton 
+        variant="overlay" 
+        label={label} 
+        icon={<X size={16} />} 
+        responsive={responsive}
+        {...props} 
+    />
+);

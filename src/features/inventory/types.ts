@@ -2,7 +2,8 @@ export interface Product {
     id: number;
     name: string;
     description: string;
-    
+    imageUrl: string | null;
+
     categoryCode: number;
     categoryName: string;
 
@@ -25,8 +26,6 @@ export interface Product {
 
     providerStatusCode: number;
     providerStatusName: string; 
-
-    images: CreateProductImageRequest[];
 }
 
 // Para el Patch de estado
@@ -72,5 +71,5 @@ export interface CreateProductRequest {
     newLocation?: CreateLocationRequest | null; // Opcional si enviamos locationId
     
     providerId: number;
-    images: CreateProductImageRequest[];
+    imageUrl?: string | null;
 }
