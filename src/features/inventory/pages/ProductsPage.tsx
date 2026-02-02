@@ -23,6 +23,8 @@ import { ProductFormModal } from '../components/ProductFormModal';
 
 // Types
 import { Product } from '../types';
+import { PERMISSIONS } from '../../../config/permissions';
+import { useCheckPermission } from '../../../hooks/useCheckPermission';
 
 export const ProductsPage = () => {
     const { success, error: toastError } = useToast();
@@ -142,6 +144,8 @@ export const ProductsPage = () => {
         return '';
     };
 
+    const canChangeStatus = useCheckPermission(PERMISSIONS.PRODUCTS.CHANGE_STATUS);
+
     // 5. DEFINICIÓN DE COLUMNAS
     const columns: Column<Product>[] = [
         {
@@ -221,10 +225,10 @@ export const ProductsPage = () => {
                 </div>
             )
         },
-        {
+        ...(canChangeStatus ? [{
             header: 'Estado',
             className: 'text-center w-24',
-            render: (row) => (
+            render: (row: Product) => (
                 <div 
                     className="flex flex-col items-center justify-center gap-1 cursor-pointer group"
                     onClick={(e) => {
@@ -240,7 +244,7 @@ export const ProductsPage = () => {
                     </span>
                 </div>
             )
-        },
+        }] : []), // Si no tiene permiso, agrega un array vacío (no renderiza nada)
         {
             header: 'Acciones',
             className: 'text-right',
