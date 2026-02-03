@@ -8,6 +8,7 @@ export const PARAM_CATEGORIES = {
     PRODUCT_CATEGORY: 'PRODUCT_CATEGORY', // Ej: 601 (Electrónica)
     RESERVATION_STATUS: 'RESERVATION_STATUS', // Ej: Confirmada, Cancelada
     PROVIDER_STATUS: 'PROVIDER_STATUS', // 121, 122...
+    COMMISSION_TYPE: 'COMMISSION_TYPE', 
 } as const;
 
 // Tipos base para Travesía
@@ -27,4 +28,9 @@ export const PROVIDER_STATUS_ID = {
     CONFIRMED: 122,
     CANCELLED: 123,
     INACTIVE: 124
+};
+
+export const COMMISSION_CODES = {
+    PERCENTAGE: 621,
+    FIXED_AMOUNT: 622
 };

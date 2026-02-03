@@ -2,27 +2,34 @@ import { useEffect, useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
-    Box, FileImage, Users, DollarSign, ShoppingCart, 
-    Trash2, AlertTriangle, Calculator 
+    Box, FileImage, ShoppingCart, Trash2, 
+    AlertTriangle, Calculator, QrCode, DollarSign, Percent, 
+    Users
 } from "lucide-react"; 
 
 // Servicios y Hooks
 import { createPackage, updatePackage } from "../services/packageService";
 import { useProducts } from "../../inventory/hooks/useProducts";
+import { useParameters } from "../../../hooks/useParameters"; // Hook Params
+import { PARAM_CATEGORIES, COMMISSION_CODES } from "../../../config/constants"; // Constantes
 import { useToast } from "../../../context/ToastContext";
+import { STORAGE_FOLDERS } from "../../../config/storage";
+import { uploadFile } from "../../shared/services/storageService";
 
 // UI Components
 import { TravesiaModal } from "../../../components/ui/TravesiaModal";
 import { TravesiaInput } from "../../../components/ui/TravesiaInput";
-import { TravesiaTextarea } from "../../../components/ui/TravesiaTextarea"; // ✅ Tu componente nuevo
-import { TravesiaStepper } from "../../../components/ui/TravesiaStepper";   // ✅ El componente Stepper
+import { TravesiaTextarea } from "../../../components/ui/TravesiaTextarea";
+import { TravesiaStepper } from "../../../components/ui/TravesiaStepper";
 import { RichSelect } from "../../../components/ui/RichSelect";
 import { BtnSave, BtnCancel, BtnNext, BtnBack } from "../../../components/ui/CrudButtons";
 import { TravesiaBadge } from "../../../components/ui/TravesiaBadge";
+import { TravesiaSingleImageUploader } from "../../../components/ui/TravesiaSingleImageUploader"; // Uploader
 
 // Types
 import { CreatePackageRequest, Package } from "../types";
 import { Product } from "../../inventory/types";
+import { TravesiaFinancialInput } from "../../../components/ui/TravesiaFinancialInput";
 
 interface Props {
     isOpen: boolean;
@@ -35,19 +42,25 @@ interface SelectedProductItem {
     quantity: number;
 }
 
-// ✅ DEFINIMOS LOS PASOS AQUÍ (Configurable: Si quieres 3, agregas uno más al array)
-const FORM_STEPS = ["Información General", "Composición y Precios"];
+const FORM_STEPS = ["Datos Generales", "Productos", "Finanzas y Comisiones"];
 
 export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
     const { success, error: toastError } = useToast();
     const queryClient = useQueryClient();
     
+    // Data Fetching
     const { data: availableProducts = [], isLoading: loadingProducts } = useProducts();
+    const { parameters: commissionTypes, isLoading: loadingCommissions } = useParameters(PARAM_CATEGORIES.COMMISSION_TYPE);
 
     // Estados Locales
     const [currentStep, setCurrentStep] = useState(1);
     const [selectedItems, setSelectedItems] = useState<SelectedProductItem[]>([]);
-    const [manualShake, setManualShake] = useState(0); 
+    const [manualShake, setManualShake] = useState(0);
+    const [isUploading, setIsUploading] = useState(false);
+
+    // Imágenes
+    const [coverImage, setCoverImage] = useState<{ file?: File; preview: string } | null>(null);
+    const [qrImage, setQrImage] = useState<{ file?: File; preview: string } | null>(null);
 
     // Formulario
     const { 
@@ -62,38 +75,64 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
         defaultValues: {
             peopleCount: 1,
             totalPrice: 0,
-            pricePerPerson: 0
+            pricePerPerson: 0,
+            minPrice: 0,
+            commissionType: COMMISSION_CODES.PERCENTAGE, 
+            commissionValue: 30
         }
     });
 
     const watchedPeopleCount = watch("peopleCount");
     const watchedTotalPrice = watch("totalPrice");
+    const watchedCommissionType = watch("commissionType");
+    const watchedCommissionValue = watch("commissionValue");
 
     // --- CÁLCULOS ---
-    const baseCost = useMemo(() => {
+    const calculatedMinPrice = useMemo(() => {
         return selectedItems.reduce((acc, item) => acc + (item.product.providerCost * item.quantity), 0);
     }, [selectedItems]);
 
+    const calculatedReferenceTotal = useMemo(() => {
+        return selectedItems.reduce((acc, item) => acc + (item.product.referencePrice * item.quantity), 0);
+    }, [selectedItems]);
+
+    // EFECTOS DE PRECIOS
     useEffect(() => {
-        setValue("totalPrice", Number(baseCost.toFixed(2)));
+        setValue("minPrice", Number(calculatedMinPrice.toFixed(2)));
+
+        if (selectedItems.length > 1) {
+            setValue("totalPrice", Number(calculatedReferenceTotal.toFixed(2)));
+        } else if (selectedItems.length === 1 && !packageToEdit) {
+            setValue("totalPrice", Number(calculatedReferenceTotal.toFixed(2)));
+        } else if (selectedItems.length === 0) {
+            setValue("totalPrice", 0);
+        }
+    }, [calculatedMinPrice, calculatedReferenceTotal, selectedItems.length, setValue, packageToEdit]);
+
+    useEffect(() => {
         const count = Number(watchedPeopleCount) || 1;
-        const perPerson = baseCost / count;
-        setValue("pricePerPerson", Number(perPerson.toFixed(2)));
-    }, [baseCost, watchedPeopleCount, setValue]);
+        const total = Number(watchedTotalPrice) || 0;
+        setValue("pricePerPerson", Number((total / count).toFixed(2)));
+    }, [watchedTotalPrice, watchedPeopleCount, setValue]);
 
     // --- CARGA DE DATOS ---
     useEffect(() => {
         if (isOpen) {
             setCurrentStep(1);
             setManualShake(0);
+            setIsUploading(false);
             
             if (packageToEdit) {
                 setValue("name", packageToEdit.name);
                 setValue("description", packageToEdit.description);
-                setValue("imageUrl", packageToEdit.imageUrl || "");
                 setValue("peopleCount", packageToEdit.peopleCount);
                 setValue("totalPrice", packageToEdit.totalPrice);
-                setValue("pricePerPerson", packageToEdit.pricePerPerson);
+                setValue("minPrice", packageToEdit.minPrice);
+                setValue("commissionType", packageToEdit.commissionType);
+                setValue("commissionValue", packageToEdit.commissionValue);
+                
+                setCoverImage(packageToEdit.imageUrl ? { preview: packageToEdit.imageUrl } : null);
+                setQrImage(packageToEdit.imageQrUrl ? { preview: packageToEdit.imageQrUrl } : null);
 
                 const reconstructedItems: SelectedProductItem[] = [];
                 packageToEdit.details.forEach(detail => {
@@ -102,13 +141,20 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
                 });
                 setSelectedItems(reconstructedItems);
             } else {
-                reset({ peopleCount: 1, totalPrice: 0, pricePerPerson: 0 });
+                reset({ peopleCount: 1, 
+                        totalPrice: 0, 
+                        minPrice: 0, 
+                        commissionType: COMMISSION_CODES.PERCENTAGE, 
+                        commissionValue: 30
+                });
                 setSelectedItems([]);
+                setCoverImage(null);
+                setQrImage(null);
             }
         }
     }, [isOpen, packageToEdit, reset, setValue, availableProducts]);
 
-    // --- HANDLERS PRODUCTOS ---
+    // --- HANDLERS ---
     const handleAddProduct = (productIdStr: string | number) => {
         const productId = Number(productIdStr);
         const product = availableProducts.find(p => p.id === productId);
@@ -134,35 +180,31 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
         ));
     };
 
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) setValue("imageUrl", e.target.files[0].name);
-    };
-
-    // --- NAVEGACIÓN WIZARD ---
+    // --- NAVEGACIÓN ---
     const handleNext = async () => {
-        const validStep1 = await trigger(["name", "peopleCount", "description"]);
-        if (validStep1) {
-            setCurrentStep(2);
+        let fields: any[] = [];
+        if (currentStep === 1) fields = ["name", "peopleCount", "description"];
+        if (currentStep === 2) {
+            if (selectedItems.length === 0) {
+                toastError("Agrega al menos un producto.");
+                setManualShake(prev => prev + 1);
+                return;
+            }
+        }
+        
+        const isValid = await trigger(fields);
+        if (isValid) {
+            setCurrentStep(prev => prev + 1);
             setManualShake(0);
         } else {
             setManualShake(prev => prev + 1);
         }
     };
 
+    // --- MUTATION & SUBMIT ---
     const mutation = useMutation({
         mutationFn: (data: CreatePackageRequest) => {
-            if (selectedItems.length === 0) throw new Error("Debes agregar al menos un producto.");
-            if (Number(data.totalPrice) < baseCost) throw new Error(`El precio total no puede ser menor al costo base.`);
-
-            const payload: CreatePackageRequest = {
-                ...data,
-                packageDetails: selectedItems.map(item => ({
-                    productId: item.product.id,
-                    quantity: item.quantity
-                }))
-            };
-
-            return packageToEdit ? updatePackage(packageToEdit.id, payload) : createPackage(payload);
+            return packageToEdit ? updatePackage(packageToEdit.id, data) : createPackage(data);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["packages"] });
@@ -171,207 +213,199 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
         },
         onError: (err: any) => {
             toastError(err.message || "Error al guardar.");
-            setManualShake(prev => prev + 1);
+            setIsUploading(false);
         }
     });
 
-    // --- RENDERIZADO ---
-    const modalTitle = (
-        <div className="flex flex-col">
-            <span className="flex items-center gap-2">
-                <Box size={20} className="text-primary"/>
-                {packageToEdit ? "Editar Paquete" : "Diseñar Nuevo Paquete"}
-            </span>
-            {/* Subtítulo eliminado, ahora lo maneja el Stepper visualmente */}
-        </div>
-    );
+    const onSubmit = async (data: CreatePackageRequest) => {
+        setIsUploading(true);
+        try {
+            if (Number(data.totalPrice) < calculatedMinPrice) {
+                throw new Error("El precio de venta no puede ser menor al costo base (minPrice).");
+            }
 
-    const modalActions = (
-        <div className="flex justify-between w-full">
-            <div>
-                {currentStep === 2 && <BtnBack onClick={() => setCurrentStep(1)} />}
-            </div>
-            <div className="flex gap-2">
-                <BtnCancel onClick={onClose} />
-                {currentStep === 1 ? (
-                    <BtnNext onClick={handleNext} />
-                ) : (
-                    <BtnSave 
-                        onClick={handleSubmit((data) => mutation.mutate(data))} 
-                        isLoading={mutation.isPending} 
-                        label={packageToEdit ? "Guardar Cambios" : "Crear Paquete"}
-                    />
-                )}
-            </div>
-        </div>
-    );
+            let finalCoverUrl = "";
+            let finalQrUrl = "";
+
+            if (coverImage) {
+                if (coverImage.file) {
+                    finalCoverUrl = await uploadFile(coverImage.file, STORAGE_FOLDERS.PACKAGES, `pkg-cover-${Date.now()}`);
+                } else {
+                    finalCoverUrl = coverImage.preview;
+                }
+            }
+
+            if (qrImage) {
+                if (qrImage.file) {
+                    finalQrUrl = await uploadFile(qrImage.file, STORAGE_FOLDERS.QRS, `pkg-qr-${Date.now()}`);
+                } else {
+                    finalQrUrl = qrImage.preview;
+                }
+            }
+
+            const payload: CreatePackageRequest = {
+                ...data,
+                imageUrl: finalCoverUrl,
+                imageQrUrl: finalQrUrl,
+                minPrice: calculatedMinPrice,
+                packageDetails: selectedItems.map(item => ({
+                    productId: item.product.id,
+                    quantity: item.quantity
+                }))
+            };
+
+            mutation.mutate(payload);
+
+        } catch (error: any) {
+            console.error(error);
+            toastError(error.message || "Error procesando datos");
+            setIsUploading(false);
+        }
+    };
+
+    const getCommissionHint = () => {
+        const type = commissionTypes.find(c => c.numericCode === watchedCommissionType);
+        if (!type) return "Seleccione tipo";
+        return type.numericCode === COMMISSION_CODES.PERCENTAGE 
+            ? "Porcentaje de ganancia por venta (Ej: 10 para 10%)" 
+            : "Monto fijo de ganancia por venta (Ej: 50 Bs)";
+    };
 
     return (
         <TravesiaModal
             isOpen={isOpen}
             onClose={onClose}
-            title={modalTitle}
-            actions={modalActions}
+            title={
+                <div className="flex flex-col">
+                    <span className="flex items-center gap-2">
+                        <Box size={20} className="text-primary"/>
+                        {packageToEdit ? "Editar Paquete" : "Diseñar Nuevo Paquete"}
+                    </span>
+                </div>
+            }
+            actions={
+                <div className="flex justify-between w-full">
+                    <div>{currentStep > 1 && <BtnBack onClick={() => setCurrentStep(prev => prev - 1)} />}</div>
+                    <div className="flex gap-2">
+                        <BtnCancel onClick={onClose} disabled={isUploading} />
+                        {currentStep < 3 ? (
+                            <BtnNext onClick={handleNext} />
+                        ) : (
+                            <BtnSave 
+                                onClick={handleSubmit(onSubmit)} 
+                                isLoading={isUploading || mutation.isPending} 
+                                label={isUploading ? "Subiendo..." : "Guardar"}
+                            />
+                        )}
+                    </div>
+                </div>
+            }
             size="xl"
         >
-            {/* ✅ AQUI ESTÁ EL COMPONENTE REUTILIZABLE */}
-            <TravesiaStepper 
-                steps={FORM_STEPS} 
-                currentStep={currentStep} 
-            />
+            <TravesiaStepper steps={FORM_STEPS} currentStep={currentStep} className="mb-6"/>
 
             <form className="min-h-[400px]">
                 
-                {/* --- PASO 1 --- */}
+                {/* === PASO 1: GENERAL === */}
                 <div className={currentStep === 1 ? "block space-y-5 animate-fade-in" : "hidden"}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-4">
                             <TravesiaInput
                                 label="Nombre del Paquete"
-                                placeholder="Ej: Paquete Fin de Semana Premium"
                                 {...register("name", { required: "Nombre requerido", maxLength: 200 })}
                                 error={errors.name?.message}
                                 shakeKey={submitCount + manualShake}
                             />
-                            
-                            {/* Componente Textarea Reutilizable */}
-                            <TravesiaTextarea 
-                                label="Descripción"
-                                placeholder="Describe qué incluye este paquete..."
-                                {...register("description")}
-                            />
-
+                            <TravesiaTextarea label="Descripción" {...register("description")} />
                             <TravesiaInput
                                 label="Cantidad de Personas"
                                 type="number"
                                 icon="users"
-                                placeholder="1"
                                 {...register("peopleCount", { required: "Requerido", min: 1 })}
                                 error={errors.peopleCount?.message}
                                 shakeKey={submitCount + manualShake}
                             />
                         </div>
-
-                        {/* Imagen */}
                         <div className="space-y-4">
-                             <div className="form-control">
-                                <label className="label"><span className="label-text font-medium flex gap-2"><FileImage size={16}/> Imagen de Portada</span></label>
-                                <div className="border-2 border-dashed border-base-300 rounded-xl p-8 flex flex-col items-center justify-center text-center hover:bg-base-200/50 transition-colors cursor-pointer relative">
-                                    <input 
-                                        type="file" 
-                                        className="absolute inset-0 opacity-0 cursor-pointer"
-                                        onChange={handleImageChange}
-                                        accept="image/*"
-                                    />
-                                    {watch("imageUrl") ? (
-                                        <div className="flex flex-col items-center text-success">
-                                            <FileImage size={48} />
-                                            <span className="mt-2 font-bold text-sm break-all">{watch("imageUrl")}</span>
-                                        </div>
-                                    ) : (
-                                        <div className="flex flex-col items-center text-base-content/40">
-                                            <FileImage size={48} />
-                                            <span className="mt-2 font-medium">Click para subir imagen</span>
-                                        </div>
-                                    )}
-                                </div>
+                            <div className="bg-base-200/30 p-4 rounded-xl border border-base-200">
+                                <span className="text-xs font-bold uppercase opacity-60 mb-2 block">Imagen de Portada</span>
+                                <TravesiaSingleImageUploader value={coverImage} onChange={setCoverImage} />
+                            </div>
+                            <div className="bg-base-200/30 p-4 rounded-xl border border-base-200">
+                                <span className="text-xs font-bold uppercase opacity-60 mb-2 block flex items-center gap-1">
+                                    <QrCode size={14}/> Código QR (Cobros)
+                                </span>
+                                <TravesiaSingleImageUploader value={qrImage} onChange={setQrImage} />
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* --- PASO 2 --- */}
+                {/* === PASO 2: PRODUCTOS === */}
                 <div className={currentStep === 2 ? "block space-y-6 animate-fade-in" : "hidden"}>
-                    
-                    {/* Selector */}
                     <div className="bg-base-200/50 p-4 rounded-xl border border-base-200">
                         <label className="label font-bold text-sm text-base-content/70">Agregar Productos al Paquete</label>
                         <RichSelect 
                             label=""
-                            placeholder="Buscar y click para agregar..."
+                            placeholder="Buscar producto..."
                             options={availableProducts.map(p => ({
                                 value: p.id,
                                 label: p.name,
-                                subtitle: `Stock: ${p.physicalStock} | Costo: Bs. ${p.providerCost}`,
+                                subtitle: `Ref. Venta: Bs. ${p.referencePrice} | Stock: ${p.physicalStock}`,
                                 icon: <ShoppingCart size={16}/>
                             }))}
                             value={null} 
                             onChange={(val) => handleAddProduct(val)}
                             isLoading={loadingProducts}
+                            shakeKey={submitCount + manualShake}
+                            error={manualShake > 0 && selectedItems.length === 0 ? "Debes agregar al menos un producto" : undefined}
                         />
                     </div>
 
-                    {/* Tabla (Igual que antes...) */}
-                    {/* 2. LISTA DE PRODUCTOS (RESPONSIVE) */}
+    {/* ✅ VISTA HÍBRIDA (Responsiva) */}
                     <div className="border border-base-300 rounded-xl overflow-hidden bg-base-100">
                         
-                        {/* --- A. VISTA DE TABLA (SOLO PC - md:block) --- */}
+                        {/* 🖥️ VISTA TABLA (SOLO ESCRITORIO - hidden md:block) */}
                         <div className="hidden md:block">
                             <table className="table table-sm w-full">
-                                <thead className="bg-base-200 text-base-content/70">
+                                <thead className="bg-base-200">
                                     <tr>
                                         <th>Producto</th>
-                                        <th>Categoría</th>
-                                        <th className="text-center">Costo Unit.</th>
-                                        <th className="text-center w-32">Cantidad</th>
-                                        <th className="text-right">Subtotal</th>
-                                        <th className="w-10"></th>
+                                        {/* ✅ NUEVA COLUMNA HEADER */}
+                                        <th className="text-center w-16">Cap.</th> 
+                                        <th className="text-center">Costo Prov.</th>
+                                        <th className="text-center">Ref. Venta</th>
+                                        <th className="text-center w-32">Cant.</th>
+                                        <th></th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {selectedItems.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={6} className="text-center py-8 text-base-content/40">
-                                                <div className="flex flex-col items-center gap-2">
-                                                    <ShoppingCart size={32} />
-                                                    <span>Selecciona productos arriba para empezar.</span>
-                                                </div>
-                                            </td>
-                                        </tr>
+                                        <tr><td colSpan={6} className="text-center py-8 opacity-50">Sin productos seleccionados</td></tr>
                                     ) : (
-                                        selectedItems.map((item) => (
-                                            <tr key={item.product.id} className="hover">
+                                        selectedItems.map(item => (
+                                            <tr key={item.product.id}>
                                                 <td>
                                                     <div className="font-bold">{item.product.name}</div>
-                                                    <div className="text-xs opacity-60 truncate max-w-[150px]">{item.product.description}</div>
+                                                    <div className="text-xs opacity-60">{item.product.categoryName}</div>
                                                 </td>
-                                                <td>
-                                                    <TravesiaBadge 
-                                                        label={item.product.categoryName} 
-                                                        code={item.product.categoryCode} 
-                                                        type="PRODUCT_CATEGORY"
-                                                    />
-                                                </td>
-                                                <td className="text-center font-mono text-xs">Bs. {item.product.providerCost}</td>
-                                                <td>
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        <button 
-                                                            type="button" 
-                                                            className="btn btn-xs btn-circle btn-ghost border border-base-300 hover:bg-error/10 hover:text-error"
-                                                            onClick={() => {
-                                                                if(item.quantity === 1) handleRemoveProduct(item.product.id);
-                                                                else handleUpdateQuantity(item.product.id, item.quantity - 1);
-                                                            }}
-                                                        >-</button>
-                                                        <span className="font-bold w-6 text-center">{item.quantity}</span>
-                                                        <button 
-                                                            type="button" 
-                                                            className="btn btn-xs btn-circle btn-ghost border border-base-300 hover:bg-primary/10 hover:text-primary"
-                                                            onClick={() => handleUpdateQuantity(item.product.id, item.quantity + 1)}
-                                                        >+</button>
+                                                {/* ✅ NUEVA COLUMNA BODY */}
+                                                <td className="text-center">
+                                                    <div className="badge badge-sm badge-ghost gap-1 text-xs" title="Capacidad de Personas">
+                                                        <Users size={10} /> {item.product.peopleCapacity}
                                                     </div>
                                                 </td>
-                                                <td className="text-right font-mono font-bold">
-                                                    Bs. {(item.product.providerCost * item.quantity).toFixed(2)}
+                                                <td className="text-center text-xs">Bs. {item.product.providerCost}</td>
+                                                <td className="text-center text-xs font-bold text-primary">Bs. {item.product.referencePrice}</td>
+                                                <td className="text-center">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <button type="button" className="btn btn-xs btn-circle" onClick={() => item.quantity > 1 && handleUpdateQuantity(item.product.id, item.quantity - 1)}>-</button>
+                                                        <span className="font-bold w-6 text-center">{item.quantity}</span>
+                                                        <button type="button" className="btn btn-xs btn-circle" onClick={() => handleUpdateQuantity(item.product.id, item.quantity + 1)}>+</button>
+                                                    </div>
                                                 </td>
                                                 <td className="text-center">
-                                                    <button 
-                                                        type="button" 
-                                                        className="btn btn-ghost btn-xs text-error"
-                                                        onClick={() => handleRemoveProduct(item.product.id)}
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
+                                                    <button type="button" className="btn btn-ghost btn-xs text-error" onClick={() => handleRemoveProduct(item.product.id)}><Trash2 size={16}/></button>
                                                 </td>
                                             </tr>
                                         ))
@@ -380,7 +414,7 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
                             </table>
                         </div>
 
-                        {/* --- B. VISTA DE TARJETAS (SOLO MÓVIL - md:hidden) --- */}
+                        {/* 📱 VISTA TARJETAS (SOLO MÓVIL - md:hidden) */}
                         <div className="md:hidden p-3 space-y-3 bg-base-200/30">
                             {selectedItems.length === 0 ? (
                                 <div className="text-center py-8 text-base-content/40 bg-base-100 rounded-xl border border-dashed border-base-300">
@@ -398,12 +432,18 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
                                             <div>
                                                 <h4 className="font-bold text-sm text-base-content">{item.product.name}</h4>
                                                 <div className="flex flex-wrap gap-2 mt-1">
+                                                    {/* Usamos tu TravesiaBadge */}
                                                     <TravesiaBadge 
                                                         label={item.product.categoryName} 
                                                         code={item.product.categoryCode} 
                                                         type="PRODUCT_CATEGORY"
-                                                        className="scale-75 origin-left" // Badge un poco más pequeño en móvil
+                                                        className="scale-75 origin-left" 
                                                     />
+                                                    
+                                                    {/* ✅ NUEVO INDICADOR MÓVIL (Al lado de la categoría) */}
+                                                    <div className="flex items-center gap-1 bg-base-200 px-2 py-0.5 rounded-full text-[10px] font-bold opacity-70 border border-base-300">
+                                                        <Users size={10} /> {item.product.peopleCapacity}
+                                                    </div>
                                                 </div>
                                             </div>
                                             <button 
@@ -418,7 +458,7 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
                                         {/* Body Tarjeta: Controles y Precios */}
                                         <div className="flex items-center justify-between bg-base-200/50 p-3 rounded-lg">
                                             
-                                            {/* Control de Cantidad (Más grande para dedos) */}
+                                            {/* Control de Cantidad Grande */}
                                             <div className="flex items-center gap-3">
                                                 <button 
                                                     type="button" 
@@ -448,52 +488,92 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
                                 ))
                             )}
                         </div>
-
-                        {/* Footer Común (Costo Base Total) */}
-                        {selectedItems.length > 0 && (
-                            <div className="bg-base-200/80 p-3 flex justify-between items-center border-t border-base-300">
-                                <span className="text-xs font-bold uppercase opacity-60">Costo Base Total:</span>
-                                <span className="font-mono font-bold text-base-content">Bs. {baseCost.toFixed(2)}</span>
-                            </div>
-                        )}
+                        
+                        {/* Footer común (Totales) */}
+                        <div className="bg-base-200/80 p-3 flex justify-between items-center border-t border-base-300 text-xs">
+                            <span className="font-bold uppercase opacity-60">Costo Base Interno (MinPrice):</span>
+                            <span className="font-mono font-bold">Bs. {calculatedMinPrice.toFixed(2)}</span>
+                        </div>
                     </div>
+                </div>
 
-                    {/* Calculadora (Igual que antes...) */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-base-200">
-                        <div className="space-y-2">
-                            <label className="flex items-center justify-between text-sm font-bold">
-                                <span className="flex items-center gap-2">
-                                    <DollarSign size={16} className="text-success"/> Precio Total de Venta
-                                </span>
-                                {watchedTotalPrice < baseCost && (
-                                    <span className="text-xs text-error flex items-center gap-1 animate-pulse">
-                                        <AlertTriangle size={12}/> Menor al costo base!
-                                    </span>
-                                )}
-                            </label>
-                            <input 
-                                type="number"
-                                step="0.01"
-                                className={`input input-bordered w-full font-mono text-lg font-bold ${watchedTotalPrice < baseCost ? 'input-error text-error' : 'input-success'}`}
-                                placeholder="0.00"
-                                {...register("totalPrice", { 
-                                    required: "Define el precio", 
-                                    min: { value: baseCost, message: "No puedes perder dinero" } 
-                                })}
-                            />
-                            {/* <p className="text-xs opacity-60">Precio final para el cliente</p> */}
+                {/* === PASO 3: FINANZAS === */}
+                <div className={currentStep === 3 ? "block space-y-6 animate-fade-in" : "hidden"}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        <div className="space-y-4">
+                            <h4 className="font-bold text-sm flex items-center gap-2"><DollarSign size={16}/> Precios del Paquete</h4>
+                            
+                    {/* ✅ USO DEL COMPONENTE REUTILIZABLE: PRECIO TOTAL */}
+                                <TravesiaFinancialInput
+                                    label="Precio Total Venta"
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="0.00"
+                                    disabled={selectedItems.length > 1}
+                                    // Pasamos clases específicas para estilo financiero grande
+                                    className={`font-mono text-lg font-bold ${Number(watchedTotalPrice) < calculatedMinPrice ? 'text-error' : 'text-success'}`}
+                                    // El badge condicional se pasa como prop
+                                    badge={selectedItems.length > 1 && (
+                                        <span className="badge badge-ghost badge-xs">Auto-calculado</span>
+                                    )}
+                                    // React Hook Form props
+                                    {...register("totalPrice", { 
+                                        required: "Requerido", 
+                                        min: { value: calculatedMinPrice, message: `Mínimo Bs. ${calculatedMinPrice}` } 
+                                    })}
+                                    error={errors.totalPrice?.message}
+                                />
+                            <div className="flex justify-between items-center bg-base-200 p-3 rounded-lg">
+                                <span className="text-xs">Precio por Persona:</span>
+                                <span className="font-mono font-bold text-primary">Bs. {watch("pricePerPerson")?.toFixed(2)}</span>
+                            </div>
                         </div>
 
-                        <div className="bg-base-200 p-4 rounded-xl flex flex-col justify-center items-end text-right border border-base-300">
-                            <span className="text-xs font-bold uppercase opacity-50 flex items-center gap-1">
-                                <Calculator size={12}/> Precio por Persona
-                            </span>
-                            <span className="text-3xl font-mono font-black text-primary">
-                                Bs. {watch("pricePerPerson")?.toFixed(2) || "0.00"}
+                        <div className="space-y-4 bg-base-200/30 p-4 rounded-xl border border-base-200">
+                            <h4 className="font-bold text-sm flex items-center gap-2"><Percent size={16}/> Comisión Vendedor</h4>
+                            
+                            <RichSelect
+                                label="Tipo de Comisión"
+                                placeholder="Seleccione Tipo"
+                                options={commissionTypes.map(c => ({
+                                    value: c.numericCode,
+                                    label: c.name,
+                                    subtitle: c.description
+                                }))}
+                                value={watch("commissionType")}
+                                onChange={(val) => setValue("commissionType", Number(val))}
+                                error={errors.commissionType ? "Requerido" : undefined}
+                                isLoading={loadingCommissions}
+                            />
+                            <input type="hidden" {...register("commissionType", { required: true })} />
+                            <TravesiaFinancialInput
+                                label="Valor de la Comisión"
+                                type="number"
+                                step="0.01"
+                                placeholder="0.00"
+                                // El botón derecho es simplemente un string que pasamos como suffix
+                                suffix={watchedCommissionType === COMMISSION_CODES.PERCENTAGE ? "%" : "Bs"}
+                                // El texto de ayuda inferior
+                                helperText={getCommissionHint()}
+                                // React Hook Form
+                                {...register("commissionValue", { required: "Requerido", min: 1 })}
+                                error={errors.commissionValue?.message}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="alert bg-info/10 border-info/20 text-xs mt-4">
+                        <Calculator size={16} className="text-info"/>
+                        <div className="flex flex-col">
+                            <span className="font-bold">Estimación de Margen Bruto:</span>
+                            <span>Precio Venta (Bs. {watchedTotalPrice}) - Costo Prov. (Bs. {calculatedMinPrice.toFixed(2)}) = 
+                                <strong className="ml-1 text-success">Bs. {(Number(watchedTotalPrice) - calculatedMinPrice).toFixed(2)}</strong>
                             </span>
                         </div>
                     </div>
                 </div>
+
             </form>
         </TravesiaModal>
     );

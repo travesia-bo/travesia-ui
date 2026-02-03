@@ -14,14 +14,17 @@ export interface Package {
     id: number;
     name: string;
     description: string;
-    slug: string;
-    imageUrl: string | null;
+    imageUrl?: string;
+    imageQrUrl?: string;
     peopleCount: number;
-    totalPrice: number;
+    
+    totalPrice: number;     
     pricePerPerson: number;
-    isPublic: boolean;
-    status: boolean; 
-    availableStock: number;
+    minPrice: number;       
+
+    commissionType: number; 
+    commissionValue: number;
+    
     details: PackageDetail[];
 }
 
@@ -39,12 +42,26 @@ export interface PackageDetailItemRequest {
     quantity: number;
 }
 
+// DTO CREACIÓN
 export interface CreatePackageRequest {
     name: string;
     description?: string;
-    imageUrl?: string;
+    
+    imageUrl?: string | null;
+    imageQrUrl?: string | null; 
+
     peopleCount: number;
+    
     totalPrice: number;
     pricePerPerson: number;
-    packageDetails: PackageDetailItemRequest[];
+    minPrice: number; 
+
+    // Comisiones
+    commissionType: number; 
+    commissionValue: number;
+
+    packageDetails: {
+        productId: number;
+        quantity: number;
+    }[];
 }
