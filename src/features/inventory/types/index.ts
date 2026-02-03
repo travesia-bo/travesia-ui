@@ -3,7 +3,7 @@
 export interface Provider {
     id: number;
     name: string;
-    address: string;
+    address: string | null;
     
     // Datos para mostrar (Lectura)
     statusName: string;

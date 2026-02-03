@@ -310,7 +310,7 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                             isLoading={loadingProviders}
                             shakeKey={submitCount + manualShake}
                             options={providers
-                                .filter(p => p.statusName.toLowerCase().includes('confirm') || p.statusName.toLowerCase().includes('pendient'))
+                                // .filter(p => p.statusName.toLowerCase().includes('confirm') || p.statusName.toLowerCase().includes('pendient'))
                                 .map(p => ({
                                     value: p.id,
                                     label: p.name,

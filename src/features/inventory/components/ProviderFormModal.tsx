@@ -38,7 +38,7 @@ const providerSchema = z.object({
 
     // --- PASO 2: PROVEEDOR (Empresa) ---
     name: z.string().min(1, "El nombre de la empresa es obligatorio").max(45),
-    address: z.string().min(5, "Dirección muy corta (mín 5 letras)").max(200),
+    address: z.string().max(200).optional().or(z.literal("")),
     cityId: z.coerce.string().min(1, "Debe seleccionar una ciudad"), 
     statusType: z.coerce.string().min(1, "Debe seleccionar un estado"),
 });
@@ -284,9 +284,6 @@ export const ProviderFormModal = ({ isOpen, onClose, providerToEdit }: Props) =>
                         label="Dirección Física" 
                         placeholder="Av. Principal #123, Zona Sur"
                         icon="map-pin"
-                        shakeKey={submitCount + manualShake}
-                        isRequired
-                        error={errors.address?.message}
                         {...register("address")}
                     />
                 </div>
