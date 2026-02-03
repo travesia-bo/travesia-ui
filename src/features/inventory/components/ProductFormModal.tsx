@@ -353,7 +353,7 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                         {(watchedCost > 0 && watchedStock > 0) && (
                             <div className="flex justify-between items-center bg-base-100 p-3 rounded-lg border border-base-300">
                                 <span className="text-xs font-bold text-base-content/60">Inversión Total (Deuda):</span>
-                                <span className="font-mono font-bold text-error">Bs. {totalProviderDebt.toFixed(2)}</span>
+                                <span className="font-mono font-bold text-info">Bs. {totalProviderDebt.toFixed(2)}</span>
                             </div>
                         )}
                     </div>
@@ -430,7 +430,6 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
                         <TravesiaSingleImageUploader 
                             value={selectedImage}
                             onChange={setSelectedImage}
-                            shakeKey={submitCount + manualShake}
                         />
                     </div>
                 </div>

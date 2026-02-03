@@ -331,7 +331,7 @@ export const PackagesPage = () => {
                     ? `Al desactivar "${packageToToggle.name}", dejará de ser elegible para ventas.` 
                     : `El paquete "${packageToToggle?.name}" volverá a estar operativo.`}
                 confirmText={packageToToggle?.status ? "Sí, Desactivar" : "Sí, Activar"}
-                variant={packageToToggle?.status ? "warning" : "primary"}
+                variant={packageToToggle?.status ? "danger" : "primary"}
                 isLoading={statusMutation.isPending}
             />
 
@@ -344,7 +344,7 @@ export const PackagesPage = () => {
                     ? `El paquete "${packageToToggle.name}" dejará de ser visible en la web pública.` 
                     : `El paquete "${packageToToggle?.name}" será visible para todos los clientes.`}
                 confirmText={packageToToggle?.isPublic ? "Sí, Ocultar" : "Sí, Publicar"}
-                variant={packageToToggle?.isPublic ? "warning" : "primary"}
+                variant={packageToToggle?.isPublic ? "danger" : "primary"}
                 isLoading={visibilityMutation.isPending}
             />
 

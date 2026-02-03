@@ -73,6 +73,8 @@ export const ProductsPage = () => {
     const [productToToggle, setProductToToggle] = useState<Product | null>(null);
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
     // --- MUTATIONS ---
     const statusMutation = useMutation({
@@ -91,9 +93,17 @@ export const ProductsPage = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['products'] });
             success("Producto eliminado.");
+            setIsDeleteModalOpen(false);
+            setProductToDelete(null);
         },
         onError: () => toastError("No se pudo eliminar el producto.")
     });
+
+    const confirmDelete = () => {
+        if (productToDelete) {
+            deleteMutation.mutate(productToDelete.id);
+        }
+    };
 
     // --- HANDLERS ---
     const handleStatusClick = (product: Product) => {
@@ -252,9 +262,8 @@ export const ProductsPage = () => {
                 <CrudButtons 
                     onEdit={() => handleEdit(row)} 
                     onDelete={() => {
-                        if(window.confirm("¿Estás seguro de eliminar este producto?")) {
-                            deleteMutation.mutate(row.id);
-                        }
+                        setProductToDelete(row);     
+                        setIsDeleteModalOpen(true);  
                     }} 
                 />
             )
@@ -373,8 +382,20 @@ export const ProductsPage = () => {
                 title={productToToggle?.status ? "¿Deshabilitar?" : "¿Habilitar?"}
                 message={`¿Estás seguro de cambiar el estado de "${productToToggle?.name}"?`}
                 confirmText={productToToggle?.status ? "Sí, Deshabilitar" : "Sí, Habilitar"}
-                variant={productToToggle?.status ? "warning" : "primary"}
+                variant={productToToggle?.status ? "danger" : "primary"}
                 isLoading={statusMutation.isPending}
+            />
+            
+            
+            <ConfirmationModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => { setIsDeleteModalOpen(false); setProductToDelete(null); }}
+                onConfirm={confirmDelete}
+                title="¿Eliminar Producto?"
+                message={`Estás a punto de eliminar "${productToDelete?.name}". Esta acción no se puede deshacer.`}
+                confirmText="Sí, Eliminar"
+                variant="danger"
+                isLoading={deleteMutation.isPending}
             />
         </div>
     );
