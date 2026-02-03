@@ -22,7 +22,8 @@ export interface Package {
     pricePerPerson: number;
     minPrice: number;       
 
-    commissionType: number; 
+    commissionTypeCode: number; 
+    commissionTypeName: string;
     commissionValue: number;
     
     details: PackageDetail[];
@@ -64,4 +65,34 @@ export interface CreatePackageRequest {
         productId: number;
         quantity: number;
     }[];
+}
+
+// RESPUESTA DEL ENDPOINT /package-details/by-package/{id}
+export interface PackageDetailResponse {
+    id: number; // detailId
+    packageId: number;
+    productId: number;
+    quantity: number;
+    // Datos informativos del producto
+    productName: string;
+    productDescription: string;
+    productCategoryCode: number;
+    productCategoryName: string;
+    productPeopleCapacity: number;
+    productReferencePrice: number;
+    // ... otros campos que vengan
+}
+
+// DTO PARA AGREGAR (POST)
+export interface AddPackageDetailRequest {
+    packageId: number;
+    productId: number;
+    quantity: number;
+}
+
+// DTO PARA ACTUALIZAR (PUT)
+export interface UpdatePackageDetailRequest {
+    packageId: number;
+    productId: number;
+    quantity: number;
 }

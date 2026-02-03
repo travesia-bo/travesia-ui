@@ -4,10 +4,9 @@ import { usePackages } from '../hooks/usePackages';
 import { useParameters } from '../../../hooks/useParameters';
 import { PARAM_CATEGORIES } from '../../../config/constants';
 import { Package, PackageDetail } from '../types';
-
+import { useCheckPermission } from '../../../hooks/useCheckPermission';
 // Servicios
 import { updatePackageStatus, updatePackageVisibility, deletePackage } from '../services/packageService';
-
 // UI Components
 import { TravesiaTable, Column } from '../../../components/ui/TravesiaTable';
 import { TravesiaInput } from '../../../components/ui/TravesiaInput';
@@ -17,9 +16,10 @@ import { TravesiaSwitch } from '../../../components/ui/TravesiaSwitch';
 import { PackageDetailsModal } from '../components/PackageDetailsModal'; // Modal de SOLO LECTURA
 import { PackageFormModal } from '../components/PackageFormModal';       // ✅ NUEVO: Modal de CREAR/EDITAR
 import { ConfirmationModal } from '../../../components/ui/ConfirmationModal';
-import { Eye, Users, Package as BoxIcon, Globe, Power } from 'lucide-react';
+import { Eye, Users, Package as BoxIcon, Globe, Power, Luggage, Boxes } from 'lucide-react';
 import { useToast } from '../../../context/ToastContext';
-
+import { PERMISSIONS } from '../../../config/permissions';
+import { ReactNode } from "react";
 export const PackagesPage = () => {
     const { success, error: toastError } = useToast();
     const queryClient = useQueryClient();
@@ -142,6 +142,8 @@ export const PackagesPage = () => {
             deleteMutation.mutate(packageToToggle.id);
         }
     };
+    
+    const canPublish = useCheckPermission(PERMISSIONS.PACKAGES.PUBLISH);
 
     // 5. Definición de Columnas
     const columns: Column<Package>[] = [
@@ -151,7 +153,7 @@ export const PackagesPage = () => {
             render: (row) => (
                 <div className="flex items-center gap-3">
                     <div className="p-2 bg-primary/10 rounded-lg text-primary hidden sm:block">
-                        <BoxIcon size={20} />
+                        <Boxes size={20} />
                     </div>
                     <div>
                         <div className="font-bold text-base-content">{row.name}</div>
@@ -171,7 +173,7 @@ export const PackagesPage = () => {
                         <span>{row.peopleCount} Pers.</span>
                     </div>
                     <div className="flex items-center gap-1 opacity-70">
-                        <BoxIcon size={14} />
+                        <BoxIcon size={14} className="text-primary"/>
                         <span>{row.availableStock} Disp.</span>
                     </div>
                 </div>
@@ -189,10 +191,11 @@ export const PackagesPage = () => {
                 </div>
             )
         },
-        {
+        // ✅ 3. COLUMNA CONDICIONAL: Solo visible si tiene permiso 'packages:publish'
+        ...(canPublish ? [{
             header: <span className="flex items-center gap-1"><Globe size={14}/> Público</span>,
             className: 'text-center w-20',
-            render: (row) => (
+            render: (row: Package) => (
                 <div 
                     className="flex justify-center cursor-pointer" 
                     onClick={(e) => { e.stopPropagation(); handleVisibilityClick(row); }}
@@ -206,9 +209,10 @@ export const PackagesPage = () => {
                     </div>
                 </div>
             )
-        },
+        }] : []),
         {
-            header: <span className="flex items-center gap-1"><Power size={14}/> Activo</span>,
+            // header: <span className="flex items-center gap-1"><Power size={14}/> Activo</span>,
+            header: 'Activo',
             className: 'text-center w-20',
             render: (row) => (
                 <div 
@@ -331,7 +335,7 @@ export const PackagesPage = () => {
                     ? `Al desactivar "${packageToToggle.name}", dejará de ser elegible para ventas.` 
                     : `El paquete "${packageToToggle?.name}" volverá a estar operativo.`}
                 confirmText={packageToToggle?.status ? "Sí, Desactivar" : "Sí, Activar"}
-                variant={packageToToggle?.status ? "danger" : "primary"}
+                variant={packageToToggle?.status ? "warning" : "primary"}
                 isLoading={statusMutation.isPending}
             />
 

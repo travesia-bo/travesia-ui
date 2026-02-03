@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
@@ -30,6 +30,11 @@ import { TravesiaSingleImageUploader } from "../../../components/ui/TravesiaSing
 import { CreatePackageRequest, Package } from "../types";
 import { Product } from "../../inventory/types";
 import { TravesiaFinancialInput } from "../../../components/ui/TravesiaFinancialInput";
+import { 
+    getPackageDetails, addPackageDetail, 
+    updatePackageDetail, deletePackageDetail 
+} from "../services/packageService";
+import { PackageDetailResponse } from "../types";
 
 interface Props {
     isOpen: boolean;
@@ -40,6 +45,7 @@ interface Props {
 interface SelectedProductItem {
     product: Product;
     quantity: number;
+    detailId?: number; // Si existe, es un item que YA estaba en la base de datos
 }
 
 const FORM_STEPS = ["Datos Generales", "Productos", "Finanzas y Comisiones"];
@@ -55,13 +61,15 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
     // Estados Locales
     const [currentStep, setCurrentStep] = useState(1);
     const [selectedItems, setSelectedItems] = useState<SelectedProductItem[]>([]);
+    const [originalDetails, setOriginalDetails] = useState<PackageDetailResponse[]>([]);
     const [manualShake, setManualShake] = useState(0);
     const [isUploading, setIsUploading] = useState(false);
 
     // Imágenes
     const [coverImage, setCoverImage] = useState<{ file?: File; preview: string } | null>(null);
     const [qrImage, setQrImage] = useState<{ file?: File; preview: string } | null>(null);
-
+    const isEditInitialLoad = useRef(true);
+    
     // Formulario
     const { 
         register, 
@@ -100,11 +108,30 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
     useEffect(() => {
         setValue("minPrice", Number(calculatedMinPrice.toFixed(2)));
 
-        if (selectedItems.length > 1) {
-            setValue("totalPrice", Number(calculatedReferenceTotal.toFixed(2)));
-        } else if (selectedItems.length === 1 && !packageToEdit) {
-            setValue("totalPrice", Number(calculatedReferenceTotal.toFixed(2)));
-        } else if (selectedItems.length === 0) {
+        // Lógica Inteligente de Total Price
+        if (selectedItems.length > 0) {
+            const newRefPrice = Number(calculatedReferenceTotal.toFixed(2));
+
+            if (packageToEdit) {
+                // MODO EDICIÓN:
+                // Si es la "Carga Inicial" (el useEffect se disparó porque cargamos los datos al abrir),
+                // NO hacemos nada para respetar el precio que trajiste de la BD.
+                if (isEditInitialLoad.current) {
+                    isEditInitialLoad.current = false; // Bajamos la bandera para la próxima
+                    return; 
+                }
+                
+                // Si la bandera ya estaba baja (significa que el usuario agregó/borró items),
+                // entonces SÍ forzamos la actualización del precio.
+                setValue("totalPrice", newRefPrice);
+                
+            } else {
+                // MODO CREACIÓN: Siempre actualizamos automáticamente
+                setValue("totalPrice", newRefPrice);
+            }
+
+        } else {
+            // Si no hay productos, el precio es 0
             setValue("totalPrice", 0);
         }
     }, [calculatedMinPrice, calculatedReferenceTotal, selectedItems.length, setValue, packageToEdit]);
@@ -118,6 +145,7 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
     // --- CARGA DE DATOS ---
     useEffect(() => {
         if (isOpen) {
+            isEditInitialLoad.current = true;
             setCurrentStep(1);
             setManualShake(0);
             setIsUploading(false);
@@ -128,18 +156,46 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
                 setValue("peopleCount", packageToEdit.peopleCount);
                 setValue("totalPrice", packageToEdit.totalPrice);
                 setValue("minPrice", packageToEdit.minPrice);
-                setValue("commissionType", packageToEdit.commissionType);
+                setValue("commissionType", packageToEdit.commissionTypeCode);
                 setValue("commissionValue", packageToEdit.commissionValue);
                 
                 setCoverImage(packageToEdit.imageUrl ? { preview: packageToEdit.imageUrl } : null);
                 setQrImage(packageToEdit.imageQrUrl ? { preview: packageToEdit.imageQrUrl } : null);
 
-                const reconstructedItems: SelectedProductItem[] = [];
-                packageToEdit.details.forEach(detail => {
-                    const foundProd = availableProducts.find(p => p.id === detail.productId);
-                    if (foundProd) reconstructedItems.push({ product: foundProd, quantity: detail.quantity });
-                });
-                setSelectedItems(reconstructedItems);
+                // ✅ LOGICA DE CARGA DE DETALLES CON EL ENDPOINT ESPECÍFICO
+                const loadDetails = async () => {
+                    try {
+                        // 1. Llamamos al endpoint específico
+                        const details = await getPackageDetails(packageToEdit.id);
+                        setOriginalDetails(details); // Guardamos snapshot original
+
+                        // 2. Mapeamos a la estructura visual (SelectedProductItem)
+                        const mappedItems: SelectedProductItem[] = details.map(d => {
+                            // Buscamos el producto completo en 'availableProducts' para tener precios, nombre, etc.
+                            // Nota: availableProducts debe estar cargado. Si es mucha data, 
+                            // quizás debas usar el objeto 'd' para reconstruir un objeto Product parcial.
+                            const productInfo = availableProducts.find(p => p.id === d.productId);
+                            
+                            // Fallback si no encontramos el producto en la lista general (raro pero posible)
+                            if (!productInfo) return null; 
+
+                            return {
+                                product: productInfo,
+                                quantity: d.quantity,
+                                detailId: d.id // Importante: Guardamos el ID de la relación
+                            };
+                        }).filter(Boolean) as SelectedProductItem[];
+
+                        setSelectedItems(mappedItems);
+                    } catch (err) {
+                        console.error("Error cargando detalles", err);
+                        toastError("Error al cargar los productos del paquete.");
+                    }
+                };
+                
+                if (availableProducts.length > 0) {
+                    loadDetails();
+                }
             } else {
                 reset({ peopleCount: 1, 
                         totalPrice: 0, 
@@ -148,6 +204,7 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
                         commissionValue: 30
                 });
                 setSelectedItems([]);
+                setOriginalDetails([]);
                 setCoverImage(null);
                 setQrImage(null);
             }
@@ -202,20 +259,27 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
     };
 
     // --- MUTATION & SUBMIT ---
-    const mutation = useMutation({
-        mutationFn: (data: CreatePackageRequest) => {
-            return packageToEdit ? updatePackage(packageToEdit.id, data) : createPackage(data);
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["packages"] });
-            success(packageToEdit ? "Paquete actualizado." : "Paquete creado exitosamente.");
-            onClose();
-        },
-        onError: (err: any) => {
-            toastError(err.message || "Error al guardar.");
-            setIsUploading(false);
-        }
-    });
+    // const mutation = useMutation({
+    //     mutationFn: (data: CreatePackageRequest) => {
+    //         return packageToEdit ? updatePackage(packageToEdit.id, data) : createPackage(data);
+    //     },
+    //     onSuccess: () => {
+    //         queryClient.invalidateQueries({ queryKey: ["packages"] });
+    //         success(packageToEdit ? "Paquete actualizado." : "Paquete creado exitosamente.");
+    //         onClose();
+    //     },
+    //     onError: (err: any) => {
+    //         toastError(err.message || "Error al guardar.");
+    //         setIsUploading(false);
+    //     }
+    // });
+
+    const finishSuccess = () => {
+        queryClient.invalidateQueries({ queryKey: ["packages"] });
+        success(packageToEdit ? "Paquete actualizado correctamente." : "Paquete creado exitosamente.");
+        onClose();
+        setIsUploading(false);
+    };
 
     const onSubmit = async (data: CreatePackageRequest) => {
         setIsUploading(true);
@@ -243,18 +307,82 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
                 }
             }
 
-            const payload: CreatePackageRequest = {
-                ...data,
-                imageUrl: finalCoverUrl,
-                imageQrUrl: finalQrUrl,
-                minPrice: calculatedMinPrice,
-                packageDetails: selectedItems.map(item => ({
-                    productId: item.product.id,
-                    quantity: item.quantity
-                }))
-            };
 
-            mutation.mutate(payload);
+            // 1. GUARDAR/ACTUALIZAR EL PAQUETE PADRE
+            let currentPackageId = packageToEdit?.id;
+
+            if (packageToEdit) {
+                // MODO EDICIÓN: PUT /packages/{id} (Ignora detalles)
+                // Enviamos data general (imágenes, nombre, precios)
+                const payloadGeneral = { ...data, imageUrl: finalCoverUrl, imageQrUrl: finalQrUrl };
+                await updatePackage(packageToEdit.id, payloadGeneral);
+            } else {
+                // MODO CREACIÓN: POST /packages (Crea todo junto)
+                // Aquí SÍ mandamos packageDetails porque es creación
+                const payloadNew = {
+                    ...data,
+                    imageUrl: finalCoverUrl,
+                    imageQrUrl: finalQrUrl,
+                    minPrice: calculatedMinPrice,
+                    packageDetails: selectedItems.map(i => ({ 
+                        productId: i.product.id, 
+                        quantity: i.quantity 
+                    }))
+                };
+                await createPackage(payloadNew);
+                
+                // Si es creación, terminamos aquí. El backend crea todo de una.
+                finishSuccess();
+                return; 
+            }
+
+            // ============================================================
+            // 2. SINCRONIZACIÓN DE DETALLES (SOLO MODO EDICIÓN)
+            // ============================================================
+            if (packageToEdit && currentPackageId) {
+                const promises: Promise<void>[] = [];
+
+                // A. DETECTAR ELIMINADOS
+                // Estaban en 'original' pero NO en 'selected'
+                const toDelete = originalDetails.filter(original => 
+                    !selectedItems.some(current => current.detailId === original.id)
+                );
+                toDelete.forEach(d => {
+                    promises.push(deletePackageDetail(d.id));
+                });
+
+                // B. DETECTAR NUEVOS Y ACTUALIZACIONES
+                selectedItems.forEach(current => {
+                    if (!current.detailId) {
+                        // --- NUEVO (No tiene detailId) ---
+                        promises.push(addPackageDetail({
+                            packageId: currentPackageId!,
+                            productId: current.product.id,
+                            quantity: current.quantity
+                        }));
+                    } else {
+                        // --- EXISTENTE (Tiene detailId) ---
+                        // Verificamos si la cantidad cambió para no hacer llamadas innecesarias
+                        const original = originalDetails.find(od => od.id === current.detailId);
+                        if (original && original.quantity !== current.quantity) {
+                            // Actualizar
+                            promises.push(updatePackageDetail(current.detailId, {
+                                packageId: currentPackageId!,
+                                productId: current.product.id,
+                                quantity: current.quantity
+                            }));
+                        }
+                    }
+                });
+
+                // C. EJECUTAR TODO EN PARALELO
+                await Promise.all(promises);
+            }
+
+            finishSuccess();
+
+            
+            // mutation.mutate(payload);
 
         } catch (error: any) {
             console.error(error);
@@ -293,7 +421,7 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
                         ) : (
                             <BtnSave 
                                 onClick={handleSubmit(onSubmit)} 
-                                isLoading={isUploading || mutation.isPending} 
+                                isLoading={isUploading} 
                                 label={isUploading ? "Subiendo..." : "Guardar"}
                             />
                         )}
@@ -362,7 +490,7 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
                         />
                     </div>
 
-    {/* ✅ VISTA HÍBRIDA (Responsiva) */}
+                    {/* ✅ VISTA HÍBRIDA (Responsiva) */}
                     <div className="border border-base-300 rounded-xl overflow-hidden bg-base-100">
                         
                         {/* 🖥️ VISTA TABLA (SOLO ESCRITORIO - hidden md:block) */}
@@ -373,6 +501,7 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
                                         <th>Producto</th>
                                         {/* ✅ NUEVA COLUMNA HEADER */}
                                         <th className="text-center w-16">Cap.</th> 
+                                        <th className="text-center w-20">Stock</th>
                                         <th className="text-center">Costo Prov.</th>
                                         <th className="text-center">Ref. Venta</th>
                                         <th className="text-center w-32">Cant.</th>
@@ -391,8 +520,14 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
                                                 </td>
                                                 {/* ✅ NUEVA COLUMNA BODY */}
                                                 <td className="text-center">
-                                                    <div className="badge badge-sm badge-ghost gap-1 text-xs" title="Capacidad de Personas">
-                                                        <Users size={10} /> {item.product.peopleCapacity}
+                                                    <div className="badge badge-sm border-pink-200 bg-pink-50 text-pink-600 gap-1 text-xs font-bold" title="Capacidad de Personas">
+                                                        <Users size={12} /> {item.product.peopleCapacity}
+                                                    </div>
+                                                </td>
+                                                {/* ✅ CELDA STOCK */}
+                                                <td className="text-center">
+                                                    <div className="badge badge-sm border-purple-200 bg-purple-50 text-purple-600 gap-1 text-xs font-bold" title="Stock Físico Disponible">
+                                                        <Box size={12} /> {item.product.physicalStock}
                                                     </div>
                                                 </td>
                                                 <td className="text-center text-xs">Bs. {item.product.providerCost}</td>
@@ -441,8 +576,12 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
                                                     />
                                                     
                                                     {/* ✅ NUEVO INDICADOR MÓVIL (Al lado de la categoría) */}
-                                                    <div className="flex items-center gap-1 bg-base-200 px-2 py-0.5 rounded-full text-[10px] font-bold opacity-70 border border-base-300">
-                                                        <Users size={10} /> {item.product.peopleCapacity}
+                                                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold border border-pink-200 bg-pink-50 text-pink-600">
+                                                        <Users size={12} /> {item.product.peopleCapacity}
+                                                    </div>
+                                                    {/* ✅ NUEVO INDICADOR STOCK MÓVIL */}
+                                                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold border border-purple-200 bg-purple-50 text-purple-600">
+                                                        <Box size={12} /> {item.product.physicalStock}
                                                     </div>
                                                 </div>
                                             </div>

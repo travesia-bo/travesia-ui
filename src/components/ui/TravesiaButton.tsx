@@ -45,15 +45,15 @@ export const TravesiaButton = ({
       case "create": return "btn-travesia-create border-none";
       
       case "steps": return "btn-travesia-steps border-none";
+      case "ghost": return "btn-travesia-ghost text-white"; 
+      case "error": return "btn-travesia-error border-none"; 
+      case "warning": return "btn-travesia-warning border-none";
+      case "success": return "btn-travesia-success border-none";
       // Defaults de DaisyUI
       case "neutral": return "btn-neutral text-white";
-      case "ghost": return "btn-travesia-ghost text-white"; 
 
       case "white": return "bg-white text-base-content hover:bg-gray-100 border-none"; 
       case "overlay": return "bg-black/40 hover:bg-black/60 text-white border-none backdrop-blur-[2px] shadow-sm";
-      case "error": return "btn-error text-white"; 
-      case "warning": return "btn-warning text-white";
-      case "success": return "btn-success text-white";
       default: return "btn-travesia-primary text-white";
     }
   };

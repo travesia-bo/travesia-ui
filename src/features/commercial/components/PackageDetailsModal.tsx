@@ -23,9 +23,10 @@ export const PackageDetailsModal = ({ isOpen, onClose, pkg }: Props) => {
                 </div>
             }
             size="lg"
-            actions={
-                <button className="btn btn-primary" onClick={onClose}>Cerrar</button>
-            }
+            // ✅ ACTIVAMOS EL CIERRE POR FUERA (Ideal para info rápida)
+            closeOnOutsideClick={true}
+            // ✅ SIN ACTIONS (Footer limpio)
+            actions={null}
         >
             <div className="space-y-6">
                 {/* Resumen Superior */}
@@ -34,9 +35,19 @@ export const PackageDetailsModal = ({ isOpen, onClose, pkg }: Props) => {
                         <h4 className="font-bold text-lg">{pkg.name}</h4>
                         <p className="text-sm opacity-70">{pkg.description}</p>
                     </div>
-                    <div className="text-right">
-                        <div className="text-2xl font-mono font-bold text-primary">Bs. {pkg.totalPrice}</div>
-                        <div className="text-xs opacity-60">Precio Total</div>
+                    {/* ✅ PRECIOS DETALLADOS */}
+                    <div className="flex gap-6 text-right">
+                        <div className="flex flex-col items-end">
+                            <div className="text-lg font-mono font-bold text-secondary flex items-center gap-1">
+                                <span className="text-xs opacity-50 font-sans font-normal">p/p</span>
+                                Bs. {pkg.pricePerPerson}
+                            </div>
+                            <div className="text-[10px] opacity-60 uppercase font-bold tracking-wider">Por Persona</div>
+                        </div>
+                        <div className="flex flex-col items-end border-l border-base-content/10 pl-6">
+                            <div className="text-2xl font-mono font-bold text-primary">Bs. {pkg.totalPrice}</div>
+                            <div className="text-xs opacity-60 uppercase font-bold tracking-wider">Precio Total</div>
+                        </div>
                     </div>
                 </div>
 

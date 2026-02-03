@@ -1,6 +1,9 @@
 import api from '../../../lib/axios';
 import { Package, PackageStatusUpdate, PackageVisibilityUpdate } from '../types';
-import { CreatePackageRequest, Package } from '../types';
+import { 
+    Package, CreatePackageRequest, PackageDetailResponse, 
+    AddPackageDetailRequest, UpdatePackageDetailRequest 
+} from "../types";
 
 const BASE_URL = '/commercial/packages';
 
@@ -38,4 +41,25 @@ export const createPackage = async (data: CreatePackageRequest): Promise<Package
 export const updatePackage = async (id: number, data: CreatePackageRequest): Promise<Package> => {
     const response = await api.put(`${BASE_URL}/${id}`, data);
     return response.data;
+};
+
+// OBTENER DETALLES
+export const getPackageDetails = async (packageId: number): Promise<PackageDetailResponse[]> => {
+    const { data } = await api.get<PackageDetailResponse[]>(`/commercial/package-details/by-package/${packageId}`);
+    return data;
+};
+
+// AGREGAR PRODUCTO AL PAQUETE
+export const addPackageDetail = async (detail: AddPackageDetailRequest): Promise<void> => {
+    await api.post('/commercial/package-details', detail);
+};
+
+// ACTUALIZAR CANTIDAD
+export const updatePackageDetail = async (detailId: number, detail: UpdatePackageDetailRequest): Promise<void> => {
+    await api.put(`/commercial/package-details/${detailId}`, detail);
+};
+
+// ELIMINAR PRODUCTO DEL PAQUETE
+export const deletePackageDetail = async (detailId: number): Promise<void> => {
+    await api.delete(`/commercial/package-details/${detailId}`);
 };
