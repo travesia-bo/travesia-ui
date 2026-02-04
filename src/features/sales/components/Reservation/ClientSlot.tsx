@@ -13,10 +13,8 @@ import { useParameters } from "../../../../hooks/useParameters";
 import { useCities } from "../../../../hooks/useCities";
 import { searchClients } from "../../services/reservationService";
 import { getCareers } from "../../services/academicService"; 
+// Usamos 'import type' para evitar errores de compilación con interfaces
 import type { ClientSearchResult } from "../../types";
-
-// Si tienes un archivo de constantes, impórtalo. Si no, usa los strings directos.
-// import { PARAM_CATEGORIES } from "../../../config/constants";
 
 interface Props {
     index: number;
@@ -28,31 +26,38 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
     const { register, setValue, watch, formState: { errors } } = useFormContext();
     const [mode, setMode] = useState<"EXISTING" | "NEW">("EXISTING");
     
-    // React Hook Form a veces pierde el tipado en arrays profundos
-    const clientErrors = errors.clients as any;
-    const currentErrors = clientErrors?.[index]?.newClientData || {};
-    const clientSelectError = clientErrors?.[index]?.clientId?.message;
+    // --- 1. HOOKS DE DATOS ---
 
-    // 1. Hooks de Datos (Patrón Correcto: Una llamada por cada lista)
-    const { cities, isLoading: loadingCities } = useCities(); 
-    
-    // ✅ CORRECCIÓN: Llamamos al hook ESPECÍFICAMENTE para cada tipo
-    // Usamos el alias 'parameters: ...' para renombrar la data que viene del hook
-    const { parameters: genderOptions = [], isLoading: loadingGenders } = useParameters("GENDER_TYPE");
-    const { parameters: clientTypeOptions = [], isLoading: loadingClientTypes } = useParameters("CLIENT_TYPE");
+    // A. Parámetros del Sistema (Listas desplegables)
+    // Nota: Verifica en tu BD si es "GENDER_TYPES" (plural) o "GENDER_TYPE" (singular). 
+    // Aquí uso defensividad (|| []) para que no explote si el nombre está mal.
+    const { parameters: genderOptions, isLoading: loadingGenders } = useParameters("GENDER_TYPE");
+    const { parameters: clientTypeOptions, isLoading: loadingClientTypes } = useParameters("CLIENT_TYPE");
 
-    // 2. Query para Carreras
+    // B. Ciudades
+    const { data: cities = [], isLoading: loadingCities } = useCities();
+
+    // C. Carreras (Cacheado)
     const { data: careers = [], isLoading: loadingCareers } = useQuery({
         queryKey: ['careers'],
         queryFn: getCareers,
         staleTime: 1000 * 60 * 60 
     });
-    
+
+    // D. Clientes (Para el buscador)
+    // ✅ CORRECCIÓN CLAVE: Cargamos los clientes aquí para pasarlos a 'options'
     const { data: clients = [], isLoading: loadingClients } = useQuery({
-        queryKey: ['clients', 'all'], // Puedes optimizar esto para buscar solo al escribir si cambias el componente RichSelect
-        queryFn: () => searchClients(''), // Trae lista inicial o todos
+        queryKey: ['clients', 'all'], 
+        queryFn: () => searchClients(''), // Trae la lista inicial
     });
-    
+
+    // --- 2. LÓGICA DE FORMULARIO ---
+
+    // Acceso seguro a errores en arrays profundos
+    const clientErrors = errors.clients as any;
+    const currentErrors = clientErrors?.[index]?.newClientData || {};
+    const clientSelectError = clientErrors?.[index]?.clientId?.message;
+
     // Watchers
     const firstName = watch(`clients.${index}.newClientData.firstName`);
     const paternal = watch(`clients.${index}.newClientData.paternalSurname`);
@@ -64,6 +69,7 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
             setValue(`clients.${index}.newClientData`, null);
         } else {
             setValue(`clients.${index}.clientId`, null);
+            // Default a "Estudiante" (o el ID que corresponda, ej: 701)
             setValue(`clients.${index}.newClientData.clientType`, 701); 
         }
     };
@@ -113,14 +119,15 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
                         </button>
                     </div>
 
-                    {/* MODO 1: BUSCAR CLIENTE */}
+                    {/* === MODO 1: BUSCAR CLIENTE (Corregido) === */}
                     {mode === "EXISTING" && (
                         <div className="space-y-3">
                             <RichSelect
                                 label="Buscar Cliente"
                                 placeholder="Seleccione un cliente..."
                                 isLoading={loadingClients}
-                                options={clients.map((c: ClientSearchResult) => ({
+                                // ✅ CORRECCIÓN: Pasamos la data de 'useQuery' mapeada
+                                options={(clients || []).map((c: ClientSearchResult) => ({
                                     value: c.id,
                                     label: c.fullName, 
                                     subtitle: `${c.careerName} | ${c.phoneNumber}`
@@ -132,21 +139,21 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
                         </div>
                     )}
 
-                    {/* MODO 2: CREAR CLIENTE */}
+                    {/* === MODO 2: CREAR CLIENTE (Blindado) === */}
                     {mode === "NEW" && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <TravesiaInput 
                                 label="Nombres" 
                                 placeholder="Ej: Juan Pablo" 
                                 {...register(`clients.${index}.newClientData.firstName`)}
-                                error={errors.clients?.[index]?.newClientData?.firstName?.message as string}
+                                error={currentErrors.firstName?.message}
                             />
                             <div className="grid grid-cols-2 gap-2">
                                 <TravesiaInput 
                                     label="Ap. Paterno" 
                                     placeholder="Pérez" 
                                     {...register(`clients.${index}.newClientData.paternalSurname`)}
-                                    error={errors.clients?.[index]?.newClientData?.paternalSurname?.message as string}
+                                    error={currentErrors.paternalSurname?.message}
                                 />
                                 <TravesiaInput 
                                     label="Ap. Materno" 
@@ -157,16 +164,16 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
 
                             <div className="grid grid-cols-2 gap-2">
                                 <TravesiaInput 
-                                    label="CI / DNI" 
+                                    label="CI" 
                                     placeholder="123456 LP" 
                                     {...register(`clients.${index}.newClientData.identityCard`)}
-                                    error={errors.clients?.[index]?.newClientData?.identityCard?.message as string}
+                                    error={currentErrors.identityCard?.message}
                                 />
                                 <TravesiaInput 
                                     label="Fecha Nac." 
                                     type="date"
                                     {...register(`clients.${index}.newClientData.birthDate`)}
-                                    error={errors.clients?.[index]?.newClientData?.birthDate?.message as string}
+                                    error={currentErrors.birthDate?.message}
                                 />
                             </div>
 
@@ -176,14 +183,15 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
                                     type="number"
                                     placeholder="70000000" 
                                     {...register(`clients.${index}.newClientData.phoneNumber`, { valueAsNumber: true })}
-                                    error={errors.clients?.[index]?.newClientData?.phoneNumber?.message as string}
+                                    error={currentErrors.phoneNumber?.message}
                                 />
                                 <TravesiaSelect
                                     label="Ciudad"
-                                    options={cities.map(c => ({ value: c.id, label: c.name }))}
+                                    // Blindaje: (cities || [])
+                                    options={(cities || []).map(c => ({ value: c.id, label: c.name }))}
                                     isLoading={loadingCities}
                                     {...register(`clients.${index}.newClientData.cityId`, { valueAsNumber: true })}
-                                    error={errors.clients?.[index]?.newClientData?.cityId?.message as string}
+                                    error={currentErrors.cityId?.message}
                                 />
                             </div>
 
@@ -194,17 +202,18 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
 
                                 <TravesiaSelect
                                     label="Tipo de Cliente"
-                                    // ✅ Usamos la lista cargada específicamente
-                                    options={clientTypeOptions.map((p: any) => ({ value: p.numericCode, label: p.name }))}
+                                    // ✅ BLINDAJE ANTI-CRASH: (lista || []).map(...)
+                                    options={(clientTypeOptions || []).map((p: any) => ({ value: p.numericCode, label: p.name }))}
                                     isLoading={loadingClientTypes}
                                     {...register(`clients.${index}.newClientData.clientType`, { valueAsNumber: true })}
-                                    error={errors.clients?.[index]?.newClientData?.clientType?.message as string}
+                                    error={currentErrors.clientType?.message}
                                 />
 
                                 <RichSelect 
                                     label="Carrera"
                                     placeholder="Buscar carrera..."
-                                    options={careers.map(c => ({ 
+                                    // ✅ BLINDAJE ANTI-CRASH
+                                    options={(careers || []).map(c => ({ 
                                         value: c.id, 
                                         label: c.name, 
                                         subtitle: c.facultyName 
@@ -212,15 +221,15 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
                                     isLoading={loadingCareers}
                                     value={watch(`clients.${index}.newClientData.careerId`)}
                                     onChange={(val) => setValue(`clients.${index}.newClientData.careerId`, Number(val))}
-                                    error={errors.clients?.[index]?.newClientData?.careerId?.message as string}
+                                    error={currentErrors.careerId?.message}
                                 />
                             </div>
 
                             <div className="grid grid-cols-2 gap-2">
                                 <TravesiaSelect
                                     label="Género"
-                                    // ✅ Usamos la lista cargada específicamente
-                                    options={genderOptions.map((p: any) => ({ value: p.numericCode, label: p.name }))}
+                                    // ✅ BLINDAJE ANTI-CRASH
+                                    options={(genderOptions || []).map((p: any) => ({ value: p.numericCode, label: p.name }))}
                                     isLoading={loadingGenders}
                                     {...register(`clients.${index}.newClientData.genderType`, { valueAsNumber: true })}
                                 />
