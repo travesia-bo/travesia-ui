@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { UserPlus, Search, CheckCircle2, BookOpen } from "lucide-react";
-import { useQuery } from "@tanstack/react-query"; 
+import { useQuery } from "@tanstack/react-query";
 
 // UI Components
 import { TravesiaInput } from "../../../../components/ui/TravesiaInput";
@@ -9,12 +9,13 @@ import { TravesiaSelect } from "../../../../components/ui/TravesiaSelect";
 import { RichSelect } from "../../../../components/ui/RichSelect";
 
 // Servicios y Hooks
-import { useParameters } from "../../../../hooks/useParameters"; 
+import { useParameters } from "../../../../hooks/useParameters";
 import { useCities } from "../../../../hooks/useCities";
 import { searchClients } from "../../services/reservationService";
-import { getCareers } from "../../services/academicService"; 
+import { getCareers } from "../../services/academicService";
 // Usamos 'import type' para evitar errores de compilación con interfaces
 import type { ClientSearchResult } from "../../types";
+import { TravesiaDateTimePicker } from "../../../../components/ui/TravesiaDateTimePicker";
 
 interface Props {
     index: number;
@@ -23,13 +24,13 @@ interface Props {
 }
 
 export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
-    const { register, setValue, watch, formState: { errors } } = useFormContext();
+    const { register, control, setValue, watch, formState: { errors } } = useFormContext();
     const [mode, setMode] = useState<"EXISTING" | "NEW">("EXISTING");
-    
+
     // --- 1. HOOKS DE DATOS ---
 
     // A. Parámetros del Sistema (Listas desplegables)
-    // Nota: Verifica en tu BD si es "GENDER_TYPES" (plural) o "GENDER_TYPE" (singular). 
+    // Nota: Verifica en tu BD si es "GENDER_TYPES" (plural) o "GENDER_TYPE" (singular).
     // Aquí uso defensividad (|| []) para que no explote si el nombre está mal.
     const { parameters: genderOptions, isLoading: loadingGenders } = useParameters("GENDER_TYPE");
     const { parameters: clientTypeOptions, isLoading: loadingClientTypes } = useParameters("CLIENT_TYPE");
@@ -41,13 +42,13 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
     const { data: careers = [], isLoading: loadingCareers } = useQuery({
         queryKey: ['careers'],
         queryFn: getCareers,
-        staleTime: 1000 * 60 * 60 
+        staleTime: 1000 * 60 * 60
     });
 
     // D. Clientes (Para el buscador)
     // ✅ CORRECCIÓN CLAVE: Cargamos los clientes aquí para pasarlos a 'options'
     const { data: clients = [], isLoading: loadingClients } = useQuery({
-        queryKey: ['clients', 'all'], 
+        queryKey: ['clients', 'all'],
         queryFn: () => searchClients(''), // Trae la lista inicial
     });
 
@@ -62,15 +63,17 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
     const firstName = watch(`clients.${index}.newClientData.firstName`);
     const paternal = watch(`clients.${index}.newClientData.paternalSurname`);
     const existingId = watch(`clients.${index}.clientId`);
-    
+
+    // En ClientSlot.tsx dentro de handleModeChange
     const handleModeChange = (newMode: "EXISTING" | "NEW") => {
         setMode(newMode);
         if (newMode === "EXISTING") {
             setValue(`clients.${index}.newClientData`, null);
         } else {
             setValue(`clients.${index}.clientId`, null);
-            // Default a "Estudiante" (o el ID que corresponda, ej: 701)
-            setValue(`clients.${index}.newClientData.clientType`, 701); 
+            // Inicializar con null o un valor por defecto numérico, NO string vacío
+            setValue(`clients.${index}.newClientData.clientType`, undefined);
+            setValue(`clients.${index}.newClientData.genderType`, undefined);
         }
     };
 
@@ -101,16 +104,16 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
             {/* Body */}
             {isExpanded && (
                 <div className="p-4 border-t border-base-200 animate-fade-in">
-                    
+
                     <div className="flex gap-2 mb-4 p-1 bg-base-200 rounded-lg w-fit">
-                        <button 
+                        <button
                             type="button"
                             onClick={() => handleModeChange("EXISTING")}
                             className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${mode === "EXISTING" ? 'bg-white shadow-sm text-primary' : 'text-base-content/60 hover:bg-base-300'}`}
                         >
                             <Search size={14} /> Buscar
                         </button>
-                        <button 
+                        <button
                             type="button"
                             onClick={() => handleModeChange("NEW")}
                             className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${mode === "NEW" ? 'bg-white shadow-sm text-secondary' : 'text-base-content/60 hover:bg-base-300'}`}
@@ -129,7 +132,7 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
                                 // ✅ CORRECCIÓN: Pasamos la data de 'useQuery' mapeada
                                 options={(clients || []).map((c: ClientSearchResult) => ({
                                     value: c.id,
-                                    label: c.fullName, 
+                                    label: c.fullName,
                                     subtitle: `${c.careerName} | ${c.phoneNumber}`
                                 }))}
                                 value={watch(`clients.${index}.clientId`)}
@@ -142,46 +145,48 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
                     {/* === MODO 2: CREAR CLIENTE (Blindado) === */}
                     {mode === "NEW" && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <TravesiaInput 
-                                label="Nombres" 
-                                placeholder="Ej: Juan Pablo" 
+                            <TravesiaInput
+                                label="Nombres"
+                                placeholder="Ej: Juan Pablo"
                                 {...register(`clients.${index}.newClientData.firstName`)}
                                 error={currentErrors.firstName?.message}
                             />
                             <div className="grid grid-cols-2 gap-2">
-                                <TravesiaInput 
-                                    label="Ap. Paterno" 
-                                    placeholder="Pérez" 
+                                <TravesiaInput
+                                    label="Ap. Paterno"
+                                    placeholder="Pérez"
                                     {...register(`clients.${index}.newClientData.paternalSurname`)}
                                     error={currentErrors.paternalSurname?.message}
                                 />
-                                <TravesiaInput 
-                                    label="Ap. Materno" 
-                                    placeholder="(Opcional)" 
+                                <TravesiaInput
+                                    label="Ap. Materno"
+                                    placeholder="(Opcional)"
                                     {...register(`clients.${index}.newClientData.maternalSurname`)}
                                 />
                             </div>
 
                             <div className="grid grid-cols-2 gap-2">
-                                <TravesiaInput 
-                                    label="CI" 
-                                    placeholder="123456 LP" 
+                                <TravesiaInput
+                                    label="CI"
+                                    placeholder="123456 LP"
                                     {...register(`clients.${index}.newClientData.identityCard`)}
                                     error={currentErrors.identityCard?.message}
                                 />
-                                <TravesiaInput 
-                                    label="Fecha Nac." 
-                                    type="date"
-                                    {...register(`clients.${index}.newClientData.birthDate`)}
-                                    error={currentErrors.birthDate?.message}
+                                <TravesiaDateTimePicker
+                                    label="Fecha Nac."
+                                    name={`clients.${index}.newClientData.birthDate`} // Asegúrate de que el nombre coincida con tu form
+                                    control={control} // Necesitas pasar 'control' al ClientSlot
+                                    isBirthDate={true}
+                                    maxDate={new Date()} // No pueden nacer en el futuro
+                                    helperText={currentErrors.birthDate?.message}
                                 />
                             </div>
 
                             <div className="grid grid-cols-2 gap-2">
-                                <TravesiaInput 
-                                    label="Celular" 
+                                <TravesiaInput
+                                    label="Celular"
                                     type="number"
-                                    placeholder="70000000" 
+                                    placeholder="70000000"
                                     {...register(`clients.${index}.newClientData.phoneNumber`, { valueAsNumber: true })}
                                     error={currentErrors.phoneNumber?.message}
                                 />
@@ -199,24 +204,29 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
                                 <div className="flex items-center gap-2 text-xs font-bold text-primary mb-1 md:col-span-2">
                                     <BookOpen size={14}/> Datos Académicos
                                 </div>
-
                                 <TravesiaSelect
                                     label="Tipo de Cliente"
-                                    // ✅ BLINDAJE ANTI-CRASH: (lista || []).map(...)
-                                    options={(clientTypeOptions || []).map((p: any) => ({ value: p.numericCode, label: p.name }))}
+                                    options={[
+                                        { value: "", label: "Selecciona" },
+                                        ...(clientTypeOptions || []).map((p: any) => ({
+                                            value: p.numericCode ?? p.id, 
+                                            label: p.name
+                                        }))
+                                    ]}
                                     isLoading={loadingClientTypes}
+                                    // ✅ Agrega valueAsNumber para que React Hook Form entregue un número al Schema
                                     {...register(`clients.${index}.newClientData.clientType`, { valueAsNumber: true })}
                                     error={currentErrors.clientType?.message}
                                 />
 
-                                <RichSelect 
+                                <RichSelect
                                     label="Carrera"
                                     placeholder="Buscar carrera..."
                                     // ✅ BLINDAJE ANTI-CRASH
-                                    options={(careers || []).map(c => ({ 
-                                        value: c.id, 
-                                        label: c.name, 
-                                        subtitle: c.facultyName 
+                                    options={(careers || []).map(c => ({
+                                        value: c.id,
+                                        label: c.name,
+                                        subtitle: c.facultyName
                                     }))}
                                     isLoading={loadingCareers}
                                     value={watch(`clients.${index}.newClientData.careerId`)}
@@ -226,23 +236,32 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
                             </div>
 
                             <div className="grid grid-cols-2 gap-2">
+
                                 <TravesiaSelect
                                     label="Género"
-                                    // ✅ BLINDAJE ANTI-CRASH
-                                    options={(genderOptions || []).map((p: any) => ({ value: p.numericCode, label: p.name }))}
+                                    options={[
+                                        { value: "", label: "Seleccione" },
+                                        ...(genderOptions || []).map((p: any) => ({ 
+                                            value: p.numericCode ?? p.id,
+                                            label: p.name 
+                                        }))
+                                    ]}
                                     isLoading={loadingGenders}
+                                    // ✅ CLAVE: valueAsNumber activado
                                     {...register(`clients.${index}.newClientData.genderType`, { valueAsNumber: true })}
+                                    error={currentErrors.genderType?.message}
                                 />
-                                <TravesiaInput 
-                                    label="Email" 
-                                    type="email" 
-                                    placeholder="(Opcional)" 
+
+                                <TravesiaInput
+                                    label="Email"
+                                    type="email"
+                                    placeholder="(Opcional)"
                                     {...register(`clients.${index}.newClientData.email`)}
                                 />
                             </div>
                         </div>
                     )}
-                    
+
                     <div className="mt-4 pt-4 border-t border-base-200">
                         <TravesiaInput
                             label="Precio Acordado"

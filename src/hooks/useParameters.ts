@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { getParametersByCategory } from '../services/parameterService';
-import { SystemParameter } from '../config/constants';
 
 /**
  * Hook reutilizable para llenar <select> dinámicos.

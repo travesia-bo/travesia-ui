@@ -133,94 +133,157 @@
 
   /* ... tus otras animaciones ... */
 
-/* FIX VISUAL STEPPER: */
-/* Elimina forzosamente la línea que aparece a la izquierda del primer paso */
-.steps .step:first-child:before {
-  content: none !important;
-  display: none !important;
-}
-
-/* Ajuste para que la barra ocupe todo el ancho correctamente */
-.steps {
-  grid-auto-columns: 1fr; 
-}
-
-/* ... tus otras reglas ... */
-
-/* FIX STEPPER NUMBERS: */
-/* Obliga al círculo (::after) a leer el atributo data-content que pusimos en el HTML */
-.step:after {
-  content: attr(data-content) !important;
-  font-weight: bold;
-}
-
-/* Opcional: Asegura que el texto sea blanco si el paso está activo (morado) */
-.step-primary:after {
-  color: white !important;
-}
-
-/* Y asegúrate de mantener el fix anterior de la línea izquierda */
-.steps .step:first-child:before {
-  content: none !important;
-  display: none !important;
-}
-
-
-/* ANIMACIONES TOAST (Efecto Tren) */
-@keyframes slideInRight {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@keyframes slideOutRight {
-  from {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  to {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-}
-
-.animate-slide-in-right {
-  animation: slideInRight 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; /* Un poco de rebote al entrar */
-}
-
-.animate-slide-out-right {
-  animation: slideOutRight 0.4s ease-in forwards;
-}
-
-
-/* SCROLLBAR INVISIBLE / DELGADO */
-@layer utilities {
-  /* Opción 1: Ocultar totalmente (Recomendado para Sidebar) */
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-  .no-scrollbar {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+  /* FIX VISUAL STEPPER: */
+  /* Elimina forzosamente la línea que aparece a la izquierda del primer paso */
+  .steps .step:first-child:before {
+    content: none !important;
+    display: none !important;
   }
 
-  /* Opción 2: Muy delgado y sutil (Para contenidos) */
-  .thin-scrollbar::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+  /* Ajuste para que la barra ocupe todo el ancho correctamente */
+  .steps {
+    grid-auto-columns: 1fr; 
   }
-  .thin-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
+
+  /* ... tus otras reglas ... */
+
+  /* FIX STEPPER NUMBERS: */
+  /* Obliga al círculo (::after) a leer el atributo data-content que pusimos en el HTML */
+  .step:after {
+    content: attr(data-content) !important;
+    font-weight: bold;
   }
-  .thin-scrollbar::-webkit-scrollbar-thumb {
-    background-color: oklch(var(--bc) / 0.2);
-    border-radius: 20px;
+
+  /* Opcional: Asegura que el texto sea blanco si el paso está activo (morado) */
+  .step-primary:after {
+    color: white !important;
   }
-}
+
+  /* Y asegúrate de mantener el fix anterior de la línea izquierda */
+  .steps .step:first-child:before {
+    content: none !important;
+    display: none !important;
+  }
+
+
+  /* ANIMACIONES TOAST (Efecto Tren) */
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideOutRight {
+    from {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+  }
+
+  .animate-slide-in-right {
+    animation: slideInRight 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; /* Un poco de rebote al entrar */
+  }
+
+  .animate-slide-out-right {
+    animation: slideOutRight 0.4s ease-in forwards;
+  }
+
+
+  /* SCROLLBAR INVISIBLE / DELGADO */
+  @layer utilities {
+    /* Opción 1: Ocultar totalmente (Recomendado para Sidebar) */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;  /* IE and Edge */
+      scrollbar-width: none;  /* Firefox */
+    }
+
+    /* Opción 2: Muy delgado y sutil (Para contenidos) */
+    .thin-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .thin-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .thin-scrollbar::-webkit-scrollbar-thumb {
+      background-color: oklch(var(--bc) / 0.2);
+      border-radius: 20px;
+    }
+  }
+  
+
+  /* --- FIX REACT DATEPICKER & DAISYUI --- */
+
+  /* Contenedor Principal */
+  .react-datepicker {
+      font-family: inherit !important;
+      background-color: hsl(var(--b1)) !important; /* bg-base-100 */
+      border: 1px solid hsl(var(--b3)) !important; /* border-base-300 */
+      color: hsl(var(--bc)) !important;
+      box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.15) !important;
+  }
+
+  /* Header */
+  .react-datepicker__header {
+      background-color: hsl(var(--b2)) !important; /* bg-base-200 */
+      border-bottom: 1px solid hsl(var(--b3)) !important;
+      padding-top: 10px !important;
+  }
+
+  /* Títulos de días */
+  .react-datepicker__day-name {
+      color: hsl(var(--bc) / 0.6) !important;
+      font-weight: bold;
+  }
+
+  /* Días */
+  .react-datepicker__day {
+      color: hsl(var(--bc)) !important;
+      font-weight: 500;
+  }
+  .react-datepicker__day:hover {
+      background-color: hsl(var(--p)) !important; /* primary */
+      color: hsl(var(--pc)) !important;
+      border-radius: 999px !important;
+  }
+
+  /* Día Seleccionado */
+  .react-datepicker__day--selected, 
+  .react-datepicker__day--keyboard-selected {
+      background-color: hsl(var(--p)) !important;
+      color: hsl(var(--pc)) !important;
+      font-weight: bold;
+  }
+
+  /* --- FIX DE LOS SELECTORES (AÑO/MES) --- */
+  .react-datepicker__header select {
+      background-color: hsl(var(--b1)) !important;
+      color: hsl(var(--bc)) !important;
+      border: 1px solid hsl(var(--b3)) !important;
+      border-radius: 6px;
+      padding: 2px 5px;
+      margin: 0 5px;
+      font-size: 0.85rem;
+      font-weight: bold;
+      cursor: pointer;
+      outline: none;
+  }
+
+  /* Triángulo molesto */
+  .react-datepicker__triangle {
+      display: none !important;
+  }
 
 }

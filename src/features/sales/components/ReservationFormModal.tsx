@@ -4,17 +4,17 @@ import { useForm, useFieldArray, FormProvider } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Calendar, Users, ShoppingCart, AlertCircle } from "lucide-react";
+import { ShoppingCart, AlertCircle } from "lucide-react";
 
 // Servicios y Tipos
 import { createReservation } from "../services/reservationService";
-import { SellerPackage } from "../types";
+import type { SellerPackage } from "../types";
 import { useToast } from "../../../context/ToastContext";
 
 // UI Components
 import { TravesiaModal } from "../../../components/ui/TravesiaModal";
-import { TravesiaInput } from "../../../components/ui/TravesiaInput";
 import { TravesiaTextarea } from "../../../components/ui/TravesiaTextarea";
+import { TravesiaDateTimePicker } from "../../../components/ui/TravesiaDateTimePicker";
 import { BtnSave, BtnCancel, BtnNext, BtnBack } from "../../../components/ui/CrudButtons";
 import { ClientSlot } from "./Reservation/ClientSlot";
 import { TravesiaStepper } from "../../../components/ui/TravesiaStepper";
@@ -39,7 +39,10 @@ const clientSchema = z.object({
         identityCard: z.string().min(4, "CI requerido"),
         cityId: z.coerce.number().min(1, "Ciudad requerida"),
         birthDate: z.string().min(1, "Fecha requerida"),
-        // ... otros campos
+        // ✅ Asegurar que estos sean tratados como números en el esquema
+        clientType: z.coerce.number().min(1, "Tipo de cliente es requerido"),
+        genderType: z.coerce.number().min(1, "Género es requerido"),
+        careerId: z.coerce.number().min(1, "Carrera es requerida"),
     }).nullable().optional()
 }).superRefine((data, ctx) => {
     // Validación Senior: O tiene ID, o tiene Datos Nuevos. No ambos nulos.
@@ -75,7 +78,7 @@ export const ReservationFormModal = ({ isOpen, onClose, pkg }: Props) => {
         }
     });
 
-    const { control, handleSubmit, reset, setValue, formState: { isSubmitting, errors } } = methods;
+    const { control, handleSubmit, setValue, formState: { isSubmitting, errors } } = methods;
     const { fields, replace } = useFieldArray({ control, name: "clients" });
 
     // Cargar defaults cuando abre el modal
@@ -103,17 +106,38 @@ export const ReservationFormModal = ({ isOpen, onClose, pkg }: Props) => {
             ...data
         }),
         onSuccess: () => {
+            console.log("✅ RESERVA CREADA CON ÉXITO:", response);
             queryClient.invalidateQueries({ queryKey: ["reservations"] }); // Si tienes lista de reservas
             success("¡Reserva registrada con éxito!");
             onClose();
         },
         onError: (err: any) => {
             console.error(err);
+            console.group("❌ ERROR AL CREAR RESERVA");
+            console.error("Mensaje:", err.message);
+            console.error("Respuesta Backend:", err.response?.data); // <--- AQUÍ VERÁS EL DETALLE DEL ERROR
+            console.error("Status:", err.response?.status);
+            console.groupEnd();
             toastError("Error al registrar la reserva. Revisa los datos.");
         }
     });
 
     const onSubmit = (data: any) => {
+        console.group("🚀 DATOS DE LA RESERVA A ENVIAR");
+        console.log("DATA COMPLETA:", data);
+        // Log detallado de cada cliente para ver si genderType/clientType van vacíos
+        data.clients.forEach((client: any, index: number) => {
+            if (client.newClientData) {
+                console.log(`Cliente Nuevo [${index}]:`, {
+                    nombre: client.newClientData.firstName,
+                    tipoCliente: client.newClientData.clientType, // <--- Fíjate si esto es null o undefined
+                    genero: client.newClientData.genderType       // <--- Fíjate si esto es null o undefined
+                });
+            } else {
+                console.log(`Cliente Existente [${index}]: ID ${client.clientId}`);
+            }
+        });
+        console.groupEnd();
         mutation.mutate(data);
     };
 
@@ -166,12 +190,13 @@ export const ReservationFormModal = ({ isOpen, onClose, pkg }: Props) => {
                                 <span>Estás creando una reserva para <strong>{pkg.peopleCount} personas</strong>. En el siguiente paso deberás registrar a cada una.</span>
                             </div>
 
-                            <TravesiaInput 
-                                label="Fecha de Expiración (Opcional)"
-                                type="datetime-local"
-                                {...methods.register("expirationDate")}
-                                helperText="Si lo dejas vacío, el sistema asignará el tiempo por defecto."
-                            />
+                            <TravesiaDateTimePicker
+                                        label="Fecha de Expiración (Opcional)"
+                                        name="expirationDate"
+                                        control={control}
+                                        helperText="Si lo dejas vacío, el sistema asignará el tiempo por defecto."
+                                        placeholder="Selecciona fecha y hora límite..."
+                                    />
 
                             <TravesiaTextarea 
                                 label="Observaciones / Notas"
