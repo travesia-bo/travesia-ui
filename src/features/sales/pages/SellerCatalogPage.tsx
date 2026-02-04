@@ -3,9 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { 
     Eye, ShoppingCart, Users, Package as BoxIcon, 
     TrendingUp, AlertCircle, CheckCircle2, 
-    ImageIcon,
-    QrCode,
-    Boxes
+    ImageIcon, QrCode, Boxes, MapPin
 } from "lucide-react";
 
 // Servicios y Tipos
@@ -30,51 +28,47 @@ export const SellerCatalogPage = () => {
         queryFn: getSellerCatalog
     });
 
-    // 2. Estados de Filtros
+    // 2. Estados
     const [searchTerm, setSearchTerm] = useState("");
     const [categoryFilter, setCategoryFilter] = useState("ALL");
-    
-    // Estado para ver detalles
     const [detailsModalOpen, setDetailsModalOpen] = useState(false);
-    const [selectedPackage, setSelectedPackage] = useState<any>(null); // Tipar con Package si son compatibles o castear
-
+    const [selectedPackage, setSelectedPackage] = useState<any>(null);
     const [viewerOpen, setViewerOpen] = useState(false);
     const [viewerData, setViewerData] = useState<{ url: string | null; title: string }>({ url: null, title: "" });
 
     // Helper para abrir el visor
     const handleViewImage = (url: string | undefined, title: string) => {
-        if (!url) return; // Opcional: mostrar toast de "No hay imagen"
+        if (!url) return; 
         setViewerData({ url, title });
         setViewerOpen(true);
     };
 
-    // 3. Lógica de Filtrado "Smart"
+    // Helper para abrir detalles
+    const handleOpenDetails = (pkg: SellerPackage) => {
+        setSelectedPackage(pkg);
+        setDetailsModalOpen(true);
+    };
+
+    // 3. Lógica de Filtrado
     const filteredPackages = useMemo(() => {
         return packages.filter(pkg => {
-            // A. Filtro por Texto
             const matchesSearch = pkg.name.toLowerCase().includes(searchTerm.toLowerCase());
-            
-            // B. Filtro por Botones (Categoría)
             let matchesCategory = true;
             if (categoryFilter !== "ALL") {
-                // Reconstruimos el ID del paquete para ver si coincide con el filtro seleccionado
                 const codes = Array.from(new Set(pkg.details.map(d => d.categoryCode))).sort().join("-");
                 matchesCategory = codes === categoryFilter;
             }
-
             return matchesSearch && matchesCategory;
         });
     }, [packages, searchTerm, categoryFilter]);
 
-    // 4. Definición de Columnas (Estilo Senior)
+    // 4. Definición de Columnas (SOLO ESCRITORIO)
     const columns: Column<SellerPackage>[] = [
         {
             header: "Paquete / Combo",
             accessorKey: "name",
             render: (row) => (
                 <div className="flex items-center gap-3 py-1">
-                    {/* ✅ OPTIMIZACIÓN: Quitamos la imagen cargada y dejamos un icono estático */}
-                    
                     <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold">
                         <Boxes size={20} />
                     </div>
@@ -87,26 +81,22 @@ export const SellerCatalogPage = () => {
                 </div>
             )
         },
+        // ... (Resto de columnas idénticas a tu código anterior) ...
         {
-            header: "Recursos", // ✅ NUEVA COLUMNA O INTEGRADA
+            header: "Recursos",
             className: "text-center w-24",
             render: (row) => (
                 <div className="flex justify-center gap-1">
-                    {/* Botón Foto Portada */}
                     <button 
                         className={`btn btn-circle btn-xs ${row.imageUrl ? 'btn-ghost text-info' : 'btn-disabled opacity-20'}`}
                         onClick={() => handleViewImage(row.imageUrl, `Portada: ${row.name}`)}
-                        title="Ver Foto Referencial"
                         disabled={!row.imageUrl}
                     >
                         <ImageIcon size={16} />
                     </button>
-
-                    {/* Botón QR */}
                     <button 
                         className={`btn btn-circle btn-xs ${row.imageQrUrl ? 'btn-ghost text-secondary' : 'btn-disabled opacity-20'}`}
-                        onClick={() => handleViewImage(row.imageQrUrl, `Código QR de Pago: ${row.name}`)}
-                        title="Ver QR de Cobro"
+                        onClick={() => handleViewImage(row.imageQrUrl, `QR: ${row.name}`)}
                         disabled={!row.imageQrUrl}
                     >
                         <QrCode size={16} />
@@ -137,7 +127,6 @@ export const SellerCatalogPage = () => {
             )
         },
         {
-            // 🔥 COLUMNA IMPORTANTE PARA EL VENDEDOR
             header: <span className="flex items-center gap-1 text-primary"><TrendingUp size={14}/> Tu Comisión</span>,
             render: (row) => (
                 <div className="font-mono font-black text-primary bg-primary/10 px-2 py-1 rounded-lg w-fit">
@@ -149,24 +138,10 @@ export const SellerCatalogPage = () => {
             header: "Disponible",
             className: "text-center w-28",
             render: (row) => {
-                const isLowStock = row.availableStock < 5;
                 const isNoStock = row.availableStock === 0;
-                
                 return (
-                    <div className={`
-                        flex items-center justify-center gap-1 font-bold text-xs px-2 py-1 rounded-full border
-                        ${isNoStock 
-                            ? "bg-error/10 text-error border-error/20" 
-                            : isLowStock 
-                                ? "bg-warning/10 text-warning border-warning/20" 
-                                : "bg-success/10 text-success border-success/20"
-                        }
-                    `}>
-                        {isNoStock ? (
-                            <>Agotado</>
-                        ) : (
-                            <>{row.availableStock} Cupos</>
-                        )}
+                    <div className={`badge ${isNoStock ? 'badge-error' : 'badge-success'} badge-outline font-bold text-xs`}>
+                        {isNoStock ? 'Agotado' : `${row.availableStock} Cupos`}
                     </div>
                 );
             }
@@ -176,29 +151,20 @@ export const SellerCatalogPage = () => {
             className: "text-right",
             render: (row) => (
                 <div className="flex justify-end items-center gap-2">
-                    {/* Botón Ver Detalles (Ghost) */}
                     <button 
-                        className="btn btn-square btn-sm btn-ghost text-base-content/70 hover:bg-base-200"
-                        onClick={() => {
-                            // Adaptamos el SellerPackage al formato Package que espera el modal
-                            // (Esto asume que el modal es flexible o los tipos coinciden lo suficiente)
-                            setSelectedPackage(row); 
-                            setDetailsModalOpen(true);
-                        }}
-                        title="Ver contenido del paquete"
+                        className="btn btn-square btn-sm btn-ghost"
+                        onClick={() => handleOpenDetails(row)}
                     >
                         <Eye size={18} />
                     </button>
-
-                    {/* Botón Reservar (Principal) */}
                     <TravesiaButton
                         variant="primary"
                         label="Reservar"
                         className="h-8 min-h-0 text-xs px-3 shadow-none"
-                        responsive={false} // Queremos que siempre diga "Reservar" si cabe
+                        responsive={false}
                         disabled={row.availableStock === 0}
                         icon={<ShoppingCart size={14} />}
-                        onClick={() => success(`Iniciando reserva para: ${row.name}`)}
+                        onClick={() => success(`Iniciando reserva: ${row.name}`)}
                     />
                 </div>
             )
@@ -206,20 +172,20 @@ export const SellerCatalogPage = () => {
     ];
 
     return (
-        <div className="p-6 space-y-6 animate-fade-in bg-base-50 min-h-screen">
+        <div className="p-4 md:p-6 space-y-4 md:space-y-6 animate-fade-in bg-base-50 min-h-screen pb-20">
             
             {/* 1. Header & Search */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-base-content flex items-center gap-2">
+                    <h1 className="text-xl md:text-2xl font-bold text-base-content flex items-center gap-2">
                         <BoxIcon className="text-primary"/> Catálogo de Ventas
                     </h1>
-                    <p className="text-sm text-base-content/60">Selecciona un paquete para iniciar una venta.</p>
+                    <p className="text-xs md:text-sm text-base-content/60">Selecciona un paquete para iniciar una venta.</p>
                 </div>
                 <div className="w-full md:w-72">
                     <TravesiaInput 
                         label="" 
-                        placeholder="Buscar por nombre..." 
+                        placeholder="Buscar paquete..." 
                         icon="search"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -228,8 +194,8 @@ export const SellerCatalogPage = () => {
                 </div>
             </div>
 
-            {/* 2. Filtros Dinámicos (Botones flotantes) */}
-            <div className="py-2">
+            {/* 2. Filtros Dinámicos (Responsive) */}
+            <div className="-mx-4 px-4 md:mx-0 md:px-0">
                 <CatalogFilters 
                     packages={packages} 
                     activeFilter={categoryFilter}
@@ -237,8 +203,8 @@ export const SellerCatalogPage = () => {
                 />
             </div>
 
-            {/* 3. Tabla de Resultados */}
-            <div className="bg-base-100 rounded-2xl shadow-sm border border-base-200 overflow-hidden">
+            {/* 3A. TABLA DE RESULTADOS (SOLO PC) */}
+            <div className="hidden md:block bg-base-100 rounded-2xl shadow-sm border border-base-200 overflow-hidden">
                 <TravesiaTable 
                     data={filteredPackages} 
                     columns={columns} 
@@ -246,14 +212,113 @@ export const SellerCatalogPage = () => {
                 />
             </div>
 
-            {/* Modal de Detalles (Reutilizado) */}
+            {/* 3B. LISTA DE TARJETAS (SOLO MÓVIL) - DISEÑO OPTIMIZADO PARA VENTAS */}
+            <div className="md:hidden space-y-4">
+                {isLoading ? (
+                    <div className="text-center py-10 opacity-50">Cargando catálogo...</div>
+                ) : filteredPackages.length === 0 ? (
+                    <div className="text-center py-10 opacity-50">No hay paquetes disponibles.</div>
+                ) : (
+                    filteredPackages.map((pkg) => {
+                        const isNoStock = pkg.availableStock === 0;
+                        const isLowStock = pkg.availableStock < 5 && !isNoStock;
+
+                        return (
+                            <div key={pkg.id} className="bg-base-100 rounded-2xl shadow-sm border border-base-200 overflow-hidden relative">
+                                {/* Badge de Disponibilidad (Esquina) */}
+                                <div className={`absolute top-0 right-0 px-3 py-1 rounded-bl-xl text-[10px] font-bold uppercase tracking-wider
+                                    ${isNoStock ? 'bg-error text-error-content' : isLowStock ? 'bg-warning text-warning-content' : 'bg-success text-success-content'}
+                                `}>
+                                    {isNoStock ? 'Agotado' : `${pkg.availableStock} Disp.`}
+                                </div>
+
+                                <div className="p-4 space-y-3">
+                                    {/* Cabecera: Nombre e Icono */}
+                                    <div className="flex items-start gap-3 pr-16">
+                                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                                            <Boxes size={20} />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-base leading-tight">{pkg.name}</h3>
+                                            <p className="text-xs text-base-content/60 mt-0.5">{pkg.details.length} productos</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Cuerpo: Datos Clave Grid */}
+                                    <div className="grid grid-cols-2 gap-3 bg-base-200/30 p-3 rounded-xl">
+                                        {/* Precio */}
+                                        <div>
+                                            <span className="text-[10px] uppercase font-bold text-base-content/50 block">Precio Venta</span>
+                                            <span className="font-mono font-bold text-lg">Bs. {pkg.totalPrice}</span>
+                                        </div>
+                                        {/* Ganancia (Resaltado) */}
+                                        <div>
+                                            <span className="text-[10px] uppercase font-bold text-primary/70 flex items-center gap-1">
+                                                <TrendingUp size={10}/> Tu Ganancia
+                                            </span>
+                                            <span className="font-mono font-black text-lg text-primary">Bs. {pkg.commission}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Detalles Extras */}
+                                    <div className="flex items-center gap-2 text-xs text-base-content/70">
+                                        <div className="flex items-center gap-1 bg-base-200 px-2 py-1 rounded-md">
+                                            <Users size={12}/> {pkg.peopleCount} Pers.
+                                        </div>
+                                        {pkg.peopleCount > 1 && (
+                                            <span className="opacity-60">({pkg.pricePerPerson} c/u)</span>
+                                        )}
+                                    </div>
+
+                                    {/* Acciones e Imágenes */}
+                                    <div className="flex items-center justify-between pt-2 border-t border-base-100">
+                                        {/* Iconos a la izquierda */}
+                                        <div className="flex gap-1">
+                                            <button 
+                                                className={`btn btn-circle btn-sm ${pkg.imageUrl ? 'btn-ghost text-info' : 'btn-disabled opacity-20'}`}
+                                                onClick={() => handleViewImage(pkg.imageUrl, `Portada`)}
+                                                disabled={!pkg.imageUrl}
+                                            >
+                                                <ImageIcon size={18} />
+                                            </button>
+                                            <button 
+                                                className={`btn btn-circle btn-sm ${pkg.imageQrUrl ? 'btn-ghost text-secondary' : 'btn-disabled opacity-20'}`}
+                                                onClick={() => handleViewImage(pkg.imageQrUrl, `QR`)}
+                                                disabled={!pkg.imageQrUrl}
+                                            >
+                                                <QrCode size={18} />
+                                            </button>
+                                            <button 
+                                                className="btn btn-circle btn-sm btn-ghost text-base-content/70"
+                                                onClick={() => handleOpenDetails(pkg)}
+                                            >
+                                                <Eye size={18} />
+                                            </button>
+                                        </div>
+
+                                        {/* Botón Principal Grande */}
+                                        <button 
+                                            className="btn btn-primary btn-sm px-6 shadow-md"
+                                            disabled={isNoStock}
+                                            onClick={() => success(`Reservando: ${pkg.name}`)}
+                                        >
+                                            <ShoppingCart size={16} />
+                                            Reservar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })
+                )}
+            </div>
+
+            {/* Modales (Reutilizados) */}
             <PackageDetailsModal 
                 isOpen={detailsModalOpen} 
                 onClose={() => setDetailsModalOpen(false)}
                 pkg={selectedPackage}
             />
-
-            {/* ✅ NUEVO: VISOR DE IMÁGENES REUTILIZABLE */}
             <TravesiaImageViewer
                 isOpen={viewerOpen}
                 onClose={() => setViewerOpen(false)}

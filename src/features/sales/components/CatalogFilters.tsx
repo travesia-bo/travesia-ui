@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Bus, Ticket, Layers, Briefcase, Hotel } from "lucide-react";
+import { Bed, Bus, Ticket, Layers, Briefcase } from "lucide-react";
 import { SellerPackage } from "../types";
 
 interface Props {
@@ -8,10 +8,9 @@ interface Props {
     onFilterChange: (filterId: string) => void;
 }
 
-// Mapeo de Códigos a Iconos/Nombres (Configurable)
 const CATEGORY_MAP: Record<number, { label: string; icon: any }> = {
     601: { label: "Congreso", icon: Ticket },
-    602: { label: "Hospedaje", icon: Hotel },
+    602: { label: "Hospedaje", icon: Bed },
     603: { label: "Bus", icon: Bus },
 };
 
@@ -19,8 +18,6 @@ export const CatalogFilters = ({ packages, activeFilter, onFilterChange }: Props
 
     const filters = useMemo(() => {
         const uniqueCombinations = new Map<string, { label: string; icon: any; count: number }>();
-
-        // 1. Contador Global
         uniqueCombinations.set("ALL", { label: "Todos", icon: Layers, count: packages.length });
 
         packages.forEach(pkg => {
@@ -29,8 +26,6 @@ export const CatalogFilters = ({ packages, activeFilter, onFilterChange }: Props
             
             if (!uniqueCombinations.has(comboId)) {
                 const labels = codes.map(c => CATEGORY_MAP[c]?.label || "Otro");
-                
-                // Lógica de Iconos: Si es mixto usa Briefcase, si es simple usa su icono
                 let icon = Briefcase; 
                 if (codes.length === 1) icon = CATEGORY_MAP[codes[0]]?.icon || Layers;
 
@@ -48,11 +43,10 @@ export const CatalogFilters = ({ packages, activeFilter, onFilterChange }: Props
     }, [packages]);
 
     return (
-        // ✅ CAMBIO 1: Contenedor Flex con Wrap y Centrado
-        // - flex-wrap: Permite que los botones bajen a la siguiente línea si no caben.
-        // - justify-center: Centra todo el bloque de botones.
-        // - gap-4: Más espacio entre botones.
-        <div className="flex flex-wrap justify-center gap-4 pb-4">
+        // ✅ LAYOUT HÍBRIDO:
+        // Móvil: flex-nowrap + overflow-x-auto (Scroll horizontal, tipo Instagram Stories)
+        // Desktop (md): flex-wrap + justify-center (Grilla centrada)
+        <div className="flex flex-nowrap overflow-x-auto md:flex-wrap md:justify-center gap-3 pb-2 scrollbar-hide snap-x px-1">
             {filters.map((filter) => {
                 const Icon = filter.icon;
                 const isActive = activeFilter === filter.id;
@@ -61,28 +55,30 @@ export const CatalogFilters = ({ packages, activeFilter, onFilterChange }: Props
                     <button
                         key={filter.id}
                         onClick={() => onFilterChange(filter.id)}
-                        // ✅ CAMBIO 2: Estilos de Botón "Grande"
-                        // - px-6 py-4: Mucho más padding para que sean grandes y fáciles de tocar.
-                        // - rounded-2xl: Bordes más redondeados para estética moderna.
-                        // - shadow-sm/md: Sombra para dar profundidad.
+                        // ✅ ESTILOS HÍBRIDOS:
+                        // Móvil: Padding pequeño, texto pequeño (Compacto)
+                        // Desktop: Padding grande, texto grande (Prominente)
                         className={`
-                            flex items-center gap-3 px-3 py-2 rounded-2xl border-2 transition-all whitespace-nowrap group
+                            flex items-center gap-2 md:gap-3 
+                            px-4 py-2 md:px-4 md:py-4 
+                            rounded-full md:rounded-2xl 
+                            border transition-all whitespace-nowrap snap-start shrink-0
                             ${isActive 
-                                ? "bg-primary text-primary-content border-primary shadow-lg scale-[1.02]" 
-                                : "bg-base-100 text-base-content/70 border-base-200 shadow-sm hover:border-primary/50 hover:bg-base-200 hover:shadow-md"
+                                ? "bg-primary text-primary-content border-primary shadow-md scale-[1.02]" 
+                                : "bg-base-100 text-base-content/70 border-base-200 shadow-sm"
                             }
                         `}
                     >
-                        {/* ✅ CAMBIO 3: Icono más grande (size={24}) */}
-                        <Icon size={24} strokeWidth={isActive ? 2.5 : 2} className="transition-transform group-hover:scale-110" />
+                        {/* Icono adaptable */}
+                        <Icon className="w-4 h-4 md:w-6 md:h-6" strokeWidth={isActive ? 2.5 : 2} />
                         
-                        {/* ✅ CAMBIO 4: Texto más grande (text-lg) */}
-                        <span className="font-bold text-lg">{filter.label}</span>
+                        {/* Texto adaptable */}
+                        <span className="font-bold text-sm md:text-lg">{filter.label}</span>
                         
-                        {/* ✅ CAMBIO 5: Badge contador más prominente */}
+                        {/* Contador adaptable */}
                         <span className={`
-                            text-sm font-bold ml-2 px-2.5 py-1 rounded-full 
-                            ${isActive ? 'bg-white/20 text-primary-content' : 'bg-base-300 text-base-content/60 group-hover:bg-base-100'}
+                            text-xs md:text-sm font-bold ml-1 px-1.5 py-0.5 md:px-2.5 md:py-1 rounded-full 
+                            ${isActive ? 'bg-white/20' : 'bg-base-200'}
                         `}>
                             {filter.count}
                         </span>
