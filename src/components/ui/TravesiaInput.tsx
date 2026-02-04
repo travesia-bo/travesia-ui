@@ -7,9 +7,10 @@ interface Props extends React.InputHTMLAttributes<HTMLInputElement> {
   icon?: string;
   isRequired?: boolean; // NUEVA PROPIEDAD
   shakeKey?: number; // NUEVA PROP
+  helperText?: string;
 }
 
-export const TravesiaInput = ({ label, error, icon, isRequired, shakeKey, className = "", ...props }: Props) => {
+export const TravesiaInput = ({ label, error, icon, isRequired, shakeKey, helperText, className = "", ...props }: Props) => {
   return (
     <div 
       key={error && shakeKey ? `err-${shakeKey}` : undefined}
@@ -42,7 +43,13 @@ export const TravesiaInput = ({ label, error, icon, isRequired, shakeKey, classN
           </div>
         )}
       </div>
-      
+
+      {helperText && (
+                    <label className="label pb-0">
+                        <span className="label-text-alt text-base-content/60">{helperText}</span>
+                    </label>
+                )}
+
       {error && (
         <label className="label">
           <span className="label-text-alt text-error font-medium">{error}</span>

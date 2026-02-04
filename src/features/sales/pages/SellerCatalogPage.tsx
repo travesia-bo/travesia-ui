@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 
 // Servicios y Tipos
-import { getSellerCatalog } from "../services/packageService";
+import { getSellerCatalog } from "../services/reservationService";
 import { SellerPackage } from "../types";
 
 // UI Components
@@ -18,6 +18,7 @@ import { TravesiaButton } from "../../../components/ui/TravesiaButton";
 import { useToast } from "../../../context/ToastContext";
 import { PackageDetailsModal } from "../../commercial/components/PackageDetailsModal";
 import { TravesiaImageViewer } from "../../../components/ui/TravesiaImageViewer";
+import { ReservationFormModal } from "../components/ReservationFormModal";
 
 export const SellerCatalogPage = () => {
     const { success } = useToast();
@@ -47,6 +48,16 @@ export const SellerCatalogPage = () => {
     const handleOpenDetails = (pkg: SellerPackage) => {
         setSelectedPackage(pkg);
         setDetailsModalOpen(true);
+    };
+
+    // ✅ NUEVOS ESTADOS PARA LA RESERVA
+    const [reservationModalOpen, setReservationModalOpen] = useState(false);
+    const [packageToReserve, setPackageToReserve] = useState<SellerPackage | null>(null);
+
+    // ✅ HELPER PARA ABRIR LA RESERVA
+    const handleReserve = (pkg: SellerPackage) => {
+        setPackageToReserve(pkg);
+        setReservationModalOpen(true);
     };
 
     // 3. Lógica de Filtrado
@@ -164,7 +175,8 @@ export const SellerCatalogPage = () => {
                         responsive={false}
                         disabled={row.availableStock === 0}
                         icon={<ShoppingCart size={14} />}
-                        onClick={() => success(`Iniciando reserva: ${row.name}`)}
+                        onClick={() => handleReserve(row)}
+                        // onClick={() => success(`Iniciando reserva: ${row.name}`)}
                     />
                 </div>
             )
@@ -300,7 +312,8 @@ export const SellerCatalogPage = () => {
                                         <button 
                                             className="btn btn-primary btn-sm px-6 shadow-md"
                                             disabled={isNoStock}
-                                            onClick={() => success(`Reservando: ${pkg.name}`)}
+                                            onClick={() => handleReserve(pkg)}
+                                            // onClick={() => success(`Reservando: ${pkg.name}`)
                                         >
                                             <ShoppingCart size={16} />
                                             Reservar
@@ -325,6 +338,18 @@ export const SellerCatalogPage = () => {
                 imageUrl={viewerData.url}
                 title={viewerData.title}
             />
+
+            {/* ✅ NUEVO: MODAL DE RESERVA */}
+            {reservationModalOpen && (
+                <ReservationFormModal 
+                    isOpen={reservationModalOpen}
+                    onClose={() => {
+                        setReservationModalOpen(false);
+                        setPackageToReserve(null);
+                    }}
+                    pkg={packageToReserve}
+                />
+            )}
         </div>
     );
 };

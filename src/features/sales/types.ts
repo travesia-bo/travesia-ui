@@ -36,3 +36,45 @@ export interface CategoryFilter {
     icon: React.ReactNode;
     count: number;
 }
+
+// Estructura para crear cliente nuevo dentro de la reserva
+export interface NewClientData {
+    firstName: string;
+    paternalSurname: string;
+    maternalSurname?: string | null;
+    phoneNumber: number;
+    email?: string | null;
+    identityCard: string;
+    clientType: number; // Parametro (ej: 701)
+    genderType: number; // Parametro (ej: 721)
+    birthDate: string; // YYYY-MM-DD
+    cityId: number;
+    careerId: number;
+}
+
+// Estructura de cada cliente en la lista
+export interface ReservationClientItem {
+    clientId: number | null; // ID si existe, null si es nuevo
+    agreedPrice: number;
+    newClientData: NewClientData | null; // null si existe, objeto si es nuevo
+}
+
+// Payload Final
+export interface CreateReservationRequest {
+    packageId: number;
+    observations?: string;
+    expirationDate?: string | null; // ISO String
+    clients: ReservationClientItem[];
+}
+
+
+export interface ClientSearchResult {
+    id: number;
+    fullName: string;
+    phoneNumber: number;
+    clientName: string; // Ej: "Estudiante"
+    clientCode: number; // Ej: 701
+    universityName: string;
+    facultyName: string;
+    careerName: string;
+}
