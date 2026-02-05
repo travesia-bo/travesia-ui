@@ -268,7 +268,6 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
                             type="number"
                             step="0.01"
                             {...register(`clients.${index}.agreedPrice`, { valueAsNumber: true })}
-                            icon="dollar-sign"
                             className="font-mono font-bold text-primary"
                         />
                     </div>

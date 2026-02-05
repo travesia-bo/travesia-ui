@@ -119,20 +119,22 @@ export const ReservationFormModal = ({ isOpen, onClose, pkg }: Props) => {
     const onSubmit = (data: any) => {
         mutation.mutate(data);
     };
-
-    if (!pkg) return null;
+if (!pkg) return null;
 
     return (
         <TravesiaModal
             isOpen={isOpen}
             onClose={onClose}
             title={
-                <div className="flex flex-col">
+                <div className="flex flex-col min-w-0 w-full">
                     <span className="flex items-center gap-2">
                         <ShoppingCart className="text-primary" size={20}/>
                         Nueva Reserva
                     </span>
-                    <span className="text-xs font-normal opacity-70">Paquete: {pkg.name}</span>
+                    {/* ✅ truncate evita que el título empuje el modal fuera de la pantalla */}
+                    <span className="text-xs font-normal opacity-70 truncate max-w-[250px] md:max-w-full">
+                        Paquete: {pkg.name}
+                    </span>
                 </div>
             }
             size="lg"
@@ -153,60 +155,81 @@ export const ReservationFormModal = ({ isOpen, onClose, pkg }: Props) => {
                 </div>
             }
         >
-            <FormProvider {...methods}>
-                <div className="space-y-6">
+            {/* 🟢 CONTENEDOR PRINCIPAL: Altura controlada para evitar que el Stepper huya */}
+            <div className="flex flex-col h-full max-h-[70vh] min-h-[400px]">
+                
+                {/* 1. STEPPER FIJO: shrink-0 asegura que siempre esté visible */}
+                <div className="flex-shrink-0 mb-6 w-full">
                     <TravesiaStepper 
                         steps={["Datos Generales", `Pasajeros (${pkg.peopleCount})`]} 
                         currentStep={currentStep} 
                     />
+                </div>
 
-                    {/* === PASO 1: DATOS GENERALES === */}
-                    {currentStep === 1 && (
-                        <div className="space-y-4 animate-fade-in">
-                            <div className="alert bg-base-200 border-none text-sm">
-                                <AlertCircle size={16} className="text-info"/>
-                                <span>Estás creando una reserva para <strong>{pkg.peopleCount} personas</strong>. En el siguiente paso deberás registrar a cada una.</span>
-                            </div>
-
-                            <TravesiaDateTimePicker
-                                        label="Fecha de Expiración (Opcional)"
-                                        name="expirationDate"
-                                        control={control}
-                                        helperText="Si lo dejas vacío, el sistema asignará el tiempo por defecto."
-                                        placeholder="Selecciona fecha y hora límite..."
-                                    />
-
-                            <TravesiaTextarea 
-                                label="Observaciones / Notas"
-                                placeholder="Ej: Terminarán el pago en el bus."
-                                rows={4}
-                                {...methods.register("observations")}
-                            />
-                        </div>
-                    )}
-
-                    {/* === PASO 2: CLIENTES (ACORDEÓN) === */}
-                    {currentStep === 2 && (
-                        <div className="space-y-3 animate-fade-in max-h-[60vh] overflow-y-auto pr-1">
-                            {fields.map((field, index) => (
-                                <ClientSlot 
-                                    key={field.id} 
-                                    index={index}
-                                    isExpanded={expandedSlot === index}
-                                    onToggle={() => setExpandedSlot(expandedSlot === index ? null : index)}
-                                />
-                            ))}
+                {/* 2. AREA DE FORMULARIO: Scroll interno */}
+                <div className="flex-1 overflow-y-auto overflow-x-hidden px-1 custom-scrollbar">
+                    <FormProvider {...methods}>
+                        <form className="space-y-6">
                             
-                            {/* Mensaje de error global si falta llenar algo */}
-                            {Object.keys(errors).length > 0 && (
-                                <div className="text-error text-xs text-center font-bold mt-2">
-                                    Faltan datos por completar en algunos pasajeros.
+                            {/* === PASO 1: DATOS GENERALES === */}
+                            {currentStep === 1 && (
+                                <div className="space-y-5 animate-fade-in">
+                                    {/* ✅ FIX TEXTO PERDIDO: Usamos whitespace-normal y flex-wrap */}
+                                    <div className="alert bg-base-200 border-none text-sm flex flex-row items-start gap-3 w-full whitespace-normal break-words">
+                                        <AlertCircle size={18} className="text-info shrink-0 mt-0.5"/>
+                                        <div className="flex-1">
+                                            <span>
+                                                Estás creando una reserva para <strong>{pkg.peopleCount} personas</strong>. 
+                                                En el siguiente paso deberás registrar a cada una.
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="w-full overflow-hidden">
+                                        <TravesiaDateTimePicker
+                                            label="Fecha de Expiración (Opcional)"
+                                            name="expirationDate"
+                                            control={control}
+                                            // ✅ Helper text con wrap forzado
+                                            helperText={
+                                            <span className="block whitespace-normal break-words leading-tight">Si lo dejas vacío, la reserva tiene al menos 24hrs para realizar al menos un pago.</span>}
+                                        />
+                                    </div>
+
+                                    <TravesiaTextarea 
+                                        label="Observaciones / Notas"
+                                        placeholder="Ej: Terminarán el pago en el bus."
+                                        rows={3}
+                                        {...methods.register("observations")}
+                                    />
                                 </div>
                             )}
-                        </div>
-                    )}
+
+                            {/* === PASO 2: CLIENTES === */}
+                            {currentStep === 2 && (
+                                <div className="space-y-4 animate-fade-in pb-4">
+                                    {fields.map((field, index) => (
+                                        <ClientSlot 
+                                            key={field.id} 
+                                            index={index}
+                                            isExpanded={expandedSlot === index}
+                                            onToggle={() => setExpandedSlot(expandedSlot === index ? null : index)}
+                                        />
+                                    ))}
+                                    
+                                    {/* Mensaje de error fijo al final del scroll para mayor visibilidad */}
+                                    {Object.keys(errors).length > 0 && (
+                                        <div className="alert alert-error text-white text-xs font-bold shadow-lg">
+                                            <AlertCircle size={16}/>
+                                            <span>Faltan datos obligatorios en los pasajeros.</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </form>
+                    </FormProvider>
                 </div>
-            </FormProvider>
+            </div>
         </TravesiaModal>
     );
 };
