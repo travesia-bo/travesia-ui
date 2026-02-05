@@ -8,17 +8,18 @@ interface Props {
     onFilterChange: (filterId: string) => void;
 }
 
-const CATEGORY_MAP: Record<number, { label: string; icon: any }> = {
-    601: { label: "Congreso", icon: Ticket },
-    602: { label: "Hospedaje", icon: Bed },
-    603: { label: "Bus", icon: Bus },
+// ✅ Mapa de colores para los iconos (siempre visibles)
+const CATEGORY_MAP: Record<number, { label: string; icon: any; color: string }> = {
+    601: { label: "Congreso", icon: Ticket, color: "text-blue-500" }, 
+    602: { label: "Hospedaje", icon: Bed, color: "text-pink-500" }, 
+    603: { label: "Bus", icon: Bus, color: "text-green-500" },
 };
 
 export const CatalogFilters = ({ packages, activeFilter, onFilterChange }: Props) => {
 
     const filters = useMemo(() => {
-        const uniqueCombinations = new Map<string, { label: string; icon: any; count: number }>();
-        uniqueCombinations.set("ALL", { label: "Todos", icon: Layers, count: packages.length });
+        const uniqueCombinations = new Map<string, { label: string; icon: any; color: string; count: number }>();
+        uniqueCombinations.set("ALL", { label: "Todos", icon: Layers, color: "text-primary", count: packages.length });
 
         packages.forEach(pkg => {
             const codes = Array.from(new Set(pkg.details.map(d => d.categoryCode))).sort();
@@ -27,11 +28,20 @@ export const CatalogFilters = ({ packages, activeFilter, onFilterChange }: Props
             if (!uniqueCombinations.has(comboId)) {
                 const labels = codes.map(c => CATEGORY_MAP[c]?.label || "Otro");
                 let icon = Briefcase; 
-                if (codes.length === 1) icon = CATEGORY_MAP[codes[0]]?.icon || Layers;
+                let color = "text-slate-400"; // Color para combos mixtos
+
+                if (codes.length === 1) {
+                    icon = CATEGORY_MAP[codes[0]]?.icon || Layers;
+                    color = CATEGORY_MAP[codes[0]]?.color || "text-primary";
+                } else {
+                    // Si es combo, tomamos el color del primer elemento para no ser aburridos
+                    color = CATEGORY_MAP[codes[0]]?.color || "text-slate-400";
+                }
 
                 uniqueCombinations.set(comboId, {
                     label: labels.join(" + "),
                     icon: icon,
+                    color: color,
                     count: 0
                 });
             }
@@ -43,10 +53,7 @@ export const CatalogFilters = ({ packages, activeFilter, onFilterChange }: Props
     }, [packages]);
 
     return (
-        // ✅ LAYOUT HÍBRIDO:
-        // Móvil: flex-nowrap + overflow-x-auto (Scroll horizontal, tipo Instagram Stories)
-        // Desktop (md): flex-wrap + justify-center (Grilla centrada)
-        <div className="flex flex-nowrap overflow-x-auto md:flex-wrap md:justify-center gap-3 pb-2 scrollbar-hide snap-x px-1">
+        <div className="flex flex-nowrap overflow-x-auto md:flex-wrap md:justify-center gap-3 pb-4 scrollbar-hide snap-x px-1">
             {filters.map((filter) => {
                 const Icon = filter.icon;
                 const isActive = activeFilter === filter.id;
@@ -55,30 +62,30 @@ export const CatalogFilters = ({ packages, activeFilter, onFilterChange }: Props
                     <button
                         key={filter.id}
                         onClick={() => onFilterChange(filter.id)}
-                        // ✅ ESTILOS HÍBRIDOS:
-                        // Móvil: Padding pequeño, texto pequeño (Compacto)
-                        // Desktop: Padding grande, texto grande (Prominente)
                         className={`
                             flex items-center gap-2 md:gap-3 
-                            px-4 py-2 md:px-4 md:py-4 
+                            px-4 py-2 md:px-6 md:py-4 
                             rounded-full md:rounded-2xl 
-                            border transition-all whitespace-nowrap snap-start shrink-0
+                            border-[3px] border-primary transition-all duration-300 whitespace-nowrap snap-start shrink-0
                             ${isActive 
-                                ? "bg-primary text-primary-content border-primary shadow-md scale-[1.02]" 
-                                : "bg-base-100 text-base-content/70 border-base-200 shadow-sm"
+                                ? "bg-primary border-primary text-primary-content shadow-lg scale-[1.02]" 
+                                : "bg-base-100 border-base-200 text-base-content/70 hover:border-primary/40 shadow-sm"
                             }
                         `}
                     >
-                        {/* Icono adaptable */}
-                        <Icon className="w-4 h-4 md:w-6 md:h-6" strokeWidth={isActive ? 2.5 : 2} />
+                        {/* ✅ El icono tiene su color cuando NO está activo, y es BLANCO cuando SI lo está */}
+                        <Icon 
+                            className={`w-4 h-4 md:w-6 md:h-6 transition-colors ${isActive ? 'text-white' : filter.color}`} 
+                            strokeWidth={isActive ? 3 : 2} 
+                        />
                         
-                        {/* Texto adaptable */}
-                        <span className="font-bold text-sm md:text-lg">{filter.label}</span>
+                        <span className={`font-black text-sm md:text-lg transition-colors ${isActive ? 'text-white' : 'text-base-content'}`}>
+                            {filter.label}
+                        </span>
                         
-                        {/* Contador adaptable */}
                         <span className={`
-                            text-xs md:text-sm font-bold ml-1 px-1.5 py-0.5 md:px-2.5 md:py-1 rounded-full 
-                            ${isActive ? 'bg-white/20' : 'bg-base-200'}
+                            text-xs md:text-sm font-bold ml-1 px-2 py-0.5 rounded-full transition-colors
+                            ${isActive ? 'bg-white/20 text-white' : 'bg-base-200 text-base-content/50'}
                         `}>
                             {filter.count}
                         </span>

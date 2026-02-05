@@ -309,15 +309,16 @@ export const SellerCatalogPage = () => {
                                         </div>
 
                                         {/* Botón Principal Grande */}
-                                        <button 
-                                            className="btn btn-primary btn-sm px-6 shadow-md"
+                                        
+                                        <TravesiaButton
+                                            variant="primary"
+                                            label="Reservar"
+                                            className="h-8 min-h-0 text-xs px-3 shadow-none"
+                                            responsive={true}
                                             disabled={isNoStock}
+                                            icon={<ShoppingCart size={16} />}
                                             onClick={() => handleReserve(pkg)}
-                                            // onClick={() => success(`Reservando: ${pkg.name}`)
-                                        >
-                                            <ShoppingCart size={16} />
-                                            Reservar
-                                        </button>
+                                        />
                                     </div>
                                 </div>
                             </div>
