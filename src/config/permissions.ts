@@ -13,7 +13,7 @@ export const PERMISSIONS = {
         EDIT: 'packages:edit',
         DELETE: 'packages:delete',
         CHANGE_STATUS: 'packages:change_status',
-        PUBLISH: 'INV_PACKAGE_PUBLISH', // ✅ AGREGA ESTE (o el nombre que use tu backend)
+        PUBLISH: 'COM_PACKAGE_PUBLISH', // ✅ AGREGA ESTE (o el nombre que use tu backend)
     },
     PROVIDERS: {
         VIEW: 'providers:view',

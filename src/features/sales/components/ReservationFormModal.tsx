@@ -38,7 +38,7 @@ const clientSchema = z.object({
         email: z.string().email().optional().nullable().or(z.literal("")),
         identityCard: z.string().min(4, "CI requerido"),
         cityId: z.coerce.number().min(1, "Ciudad requerida"),
-        birthDate: z.string().min(1, "Fecha requerida"),
+        birthDate: z.string().optional().nullable(),
         // ✅ Asegurar que estos sean tratados como números en el esquema
         clientType: z.coerce.number().min(1, "Tipo de cliente es requerido"),
         genderType: z.coerce.number().min(1, "Género es requerido"),
@@ -106,38 +106,17 @@ export const ReservationFormModal = ({ isOpen, onClose, pkg }: Props) => {
             ...data
         }),
         onSuccess: () => {
-            console.log("✅ RESERVA CREADA CON ÉXITO:", response);
             queryClient.invalidateQueries({ queryKey: ["reservations"] }); // Si tienes lista de reservas
             success("¡Reserva registrada con éxito!");
             onClose();
         },
         onError: (err: any) => {
-            console.error(err);
-            console.group("❌ ERROR AL CREAR RESERVA");
-            console.error("Mensaje:", err.message);
-            console.error("Respuesta Backend:", err.response?.data); // <--- AQUÍ VERÁS EL DETALLE DEL ERROR
-            console.error("Status:", err.response?.status);
-            console.groupEnd();
+            console.error("Respuesta Backend:", err.response?.data);
             toastError("Error al registrar la reserva. Revisa los datos.");
         }
     });
 
     const onSubmit = (data: any) => {
-        console.group("🚀 DATOS DE LA RESERVA A ENVIAR");
-        console.log("DATA COMPLETA:", data);
-        // Log detallado de cada cliente para ver si genderType/clientType van vacíos
-        data.clients.forEach((client: any, index: number) => {
-            if (client.newClientData) {
-                console.log(`Cliente Nuevo [${index}]:`, {
-                    nombre: client.newClientData.firstName,
-                    tipoCliente: client.newClientData.clientType, // <--- Fíjate si esto es null o undefined
-                    genero: client.newClientData.genderType       // <--- Fíjate si esto es null o undefined
-                });
-            } else {
-                console.log(`Cliente Existente [${index}]: ID ${client.clientId}`);
-            }
-        });
-        console.groupEnd();
         mutation.mutate(data);
     };
 
@@ -168,7 +147,6 @@ export const ReservationFormModal = ({ isOpen, onClose, pkg }: Props) => {
                             <BtnSave 
                                 onClick={handleSubmit(onSubmit)} 
                                 isLoading={isSubmitting || mutation.isPending} 
-                                label="Finalizar Reserva"
                             />
                         )}
                     </div>
