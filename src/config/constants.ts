@@ -35,3 +35,11 @@ export const COMMISSION_CODES = {
     PERCENTAGE: 621,
     FIXED_AMOUNT: 622
 };
+
+export const RESERVATION_STATUS_ID = {
+    PENDING: 101,
+    CONFIRMED: 102, // ✅ Usaremos este para la sumatoria
+    CANCELLED: 103,
+    EXPIRED: 104,
+    COMPLETED: 105
+} as const;

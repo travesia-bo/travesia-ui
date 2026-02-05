@@ -18,6 +18,7 @@ import { ReservationDetailModal } from '../components/ReservationDetailModal';
 
 // Types
 import type { ReservationResponse } from '../types';
+import { RESERVATION_STATUS_ID } from '../../../config/constants';
 
 export const ReservationsPage = () => {
     // 1. DATA FETCHING
@@ -29,6 +30,15 @@ export const ReservationsPage = () => {
     // Cargar estados de reserva para el filtro
     const { parameters: reservationStatuses, isLoading: loadingStatuses } = 
         useParameters(PARAM_CATEGORIES.RESERVATION_STATUS || 'RESERVATION_STATUS');
+
+    const [filterSeller, setFilterSeller] = useState<string>('');
+
+    const availableSellers = useMemo(() => {
+        const sellers = reservations
+            .map(res => res.userNameSeller)
+            .filter((name): name is string => !!name);
+        return Array.from(new Set(sellers)).sort();
+    }, [reservations]);
 
     // 2. PERMISOS
     const canManageCommissions = useCheckPermission(PERMISSIONS.SALES.MANAGE_COMMISSIONS);
@@ -50,9 +60,20 @@ export const ReservationsPage = () => {
                 ? true
                 : res.statusCode === Number(filterStatus);
 
-            return matchesSearch && matchesStatus;
+            const matchesSeller = filterSeller === ''
+                ? true
+                : res.userNameSeller === filterSeller;
+
+            return matchesSearch && matchesStatus && matchesSeller;
         });
-    }, [reservations, searchTerm, filterStatus]);
+    }, [reservations, searchTerm, filterStatus, filterSeller]);
+
+    // 3.1 CÁLCULO DE TOTALES (Basado en la lista filtrada)
+    const totalCommissions = useMemo(() => {
+        return filteredReservations
+            .filter(res => res.statusCode === RESERVATION_STATUS_ID.CONFIRMED)
+            .reduce((acc, res) => acc + (res.commissionSeller || 0), 0);
+    }, [filteredReservations]);
 
     // 4. ESTADOS PARA MODALES
     const [selectedReservation, setSelectedReservation] = useState<ReservationResponse | null>(null);
@@ -60,11 +81,11 @@ export const ReservationsPage = () => {
     // 5. LÓGICA DE COLORES POR FILA (Basado en statusCode)
     const getRowClassName = (row: ReservationResponse) => {
         const code = row.statusCode;switch (code) {
-        case 101: return '!bg-warning/10 border-l-4 border-l-warning'; 
-        case 102: return '!bg-success/10 border-l-4 border-l-success';
-        case 103: return '!bg-error/10 border-l-4 border-l-error opacity-70';
-        case 104: return '!bg-orange-500/10 border-l-4 border-l-orange-500'; // Expirado
-        case 105: return '!bg-info/10 border-l-4 border-l-info';           // Completado
+        case RESERVATION_STATUS_ID.PENDING: return '!bg-warning/10 border-l-4 border-l-warning'; 
+        case RESERVATION_STATUS_ID.CONFIRMED: return '!bg-success/10 border-l-4 border-l-success';
+        case RESERVATION_STATUS_ID.CANCELLED: return '!bg-error/10 border-l-4 border-l-error opacity-70';
+        case RESERVATION_STATUS_ID.EXPIRED: return '!bg-orange-500/10 border-l-4 border-l-orange-500'; // Expirado
+        case RESERVATION_STATUS_ID.COMPLETED: return '!bg-info/10 border-l-4 border-l-info';           // Completado
         default: return '';
         }
     };
@@ -98,8 +119,7 @@ export const ReservationsPage = () => {
                 
                 {/* ✅ La comisión se muestra siempre (es su propia ganancia si es vendedor) */}
                 <div className="flex items-center text-success text-[18px] font-mono font-bold bg-success/10 w-fit px-1.5 rounded mt-0.5">
-                    <DollarSign size={18} />
-                    <span>{row.commissionSeller.toFixed(2)}</span>
+                    <span>Bs. {row.commissionSeller.toFixed(2)}</span>
                 </div>
             </div>
             )
@@ -167,7 +187,7 @@ export const ReservationsPage = () => {
             </div>
 
             {/* Filtros */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-base-100 p-4 rounded-xl shadow-sm border border-base-200">
+            <div className={`grid grid-cols-1 ${canManageCommissions ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-4 bg-base-100 p-4 rounded-xl shadow-sm border border-base-200`}>
                 <div className="md:col-span-1">
                     <TravesiaInput 
                         label="Búsqueda Inteligente" 
@@ -189,6 +209,36 @@ export const ReservationsPage = () => {
                         enableDefaultOption
                     />
                 </div>
+                
+                {/* ✅ FILTRO DE VENDEDOR: Solo visible para quienes pueden gestionar comisiones */}
+                {canManageCommissions && (
+                    <div className="animate-fade-in">
+                        <TravesiaSelect 
+                            label="Filtrar por Vendedor"
+                            placeholder="Todos los vendedores"
+                            options={availableSellers.map(seller => ({ value: seller, label: `@${seller}` }))}
+                            value={filterSeller}
+                            onChange={(e) => setFilterSeller(e.target.value)}
+                            enableDefaultOption
+                        />
+                    </div>
+                )}
+
+                {/* KPI de Ganancia Real */}
+                <div className="flex flex-col items-end justify-center h-full pb-1">
+                    <div className="flex items-center gap-1.5 mb-1">
+                        <span className="text-[10px] uppercase font-black opacity-60 tracking-wider">Comisión acumulada</span>
+                        <div className="badge badge-success badge-xs outline outline-1 outline-success/20"></div>
+                    </div>
+                    <div className="flex items-center text-success font-mono font-black text-2xl gap-1">
+                        <span className="text-sm">Bs.</span>
+                        {totalCommissions.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                    <span className="text-[9px] opacity-50 italic">
+                        Calculado sobre {filteredReservations.filter(r => r.statusCode === 102).length} ventas confirmadas
+                    </span>
+                </div>
+           
             </div>
 
             {/* Tabla Principal */}

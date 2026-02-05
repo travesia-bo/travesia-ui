@@ -22,6 +22,6 @@ export const PERMISSIONS = {
     // ... otros módulos
     SALES: {
         VIEW_ALL: 'sales:view_all',
-        MANAGE_COMMISSIONS: 'COM_SELLER_MANAGE', // ✅ El permiso solicitado
+        MANAGE_COMMISSIONS: 'COM_SELLER_MANAGE',
     },
 } as const;
