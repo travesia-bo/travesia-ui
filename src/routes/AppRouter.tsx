@@ -10,6 +10,7 @@ import { useTheme } from "../hooks/useTheme";
 import { ProductsPage } from "../features/inventory/pages/ProductsPage";
 import { PackagesPage } from "../features/commercial/pages/PackagesPage";
 import { SellerCatalogPage } from "../features/sales/pages/SellerCatalogPage";
+import { ReservationsPage } from "../features/sales/pages/ReservationsPage";
 
 export const AppRouter = () => {
   useTheme(); 
@@ -33,6 +34,7 @@ export const AppRouter = () => {
                 <Route path="/commercial/packages" element={<PackagesPage />} />
                 {/* --- MÓDULO DE VENTAS --- */}
                 <Route path="/sales/pos" element={<SellerCatalogPage />} />
+                <Route path="/sales/reservations" element={<ReservationsPage />} />
 
 
                 {/* Futuras rutas de inventario */}

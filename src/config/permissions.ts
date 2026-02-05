@@ -18,5 +18,10 @@ export const PERMISSIONS = {
     PROVIDERS: {
         VIEW: 'providers:view',
         // ... otros
-    }
+    },
+    // ... otros módulos
+    SALES: {
+        VIEW_ALL: 'sales:view_all',
+        MANAGE_COMMISSIONS: 'COM_SELLER_MANAGE', // ✅ El permiso solicitado
+    },
 } as const;

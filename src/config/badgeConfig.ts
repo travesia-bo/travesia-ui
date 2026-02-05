@@ -2,6 +2,7 @@
 export type BadgeType = 
     | 'PRODUCT_CATEGORY' 
     | 'PROVIDER_STATUS' 
+    | 'RESERVATION_STATUS' 
     | 'TRANSACTION_STATUS' 
     | 'DEFAULT';
 
@@ -18,10 +19,11 @@ export const BADGE_STYLES: Record<BadgeType, Record<string | number, string>> = 
         default: "badge-ghost"
     },
 
-    // 2. ESTADOS (Genérico para booleanos o códigos de status)
     PROVIDER_STATUS: {
-        1: "badge-success text-white", // Activo
-        0: "badge-error text-white",   // Inactivo
+        121: "badge-warning text-white", // Pendiente
+        122: "badge-success text-white", // Confirmada
+        123: "badge-error text-white",   // Cancelada
+        124: "badge-ghost",              // Inactiva
         default: "badge-ghost"
     },
 
@@ -31,6 +33,15 @@ export const BADGE_STYLES: Record<BadgeType, Record<string | number, string>> = 
         COMPLETED: "badge-success text-white",
         FAILED: "badge-error text-white",
         default: "badge-neutral text-neutral-content"
+    },
+    
+    RESERVATION_STATUS: {
+        101: "badge-warning text-white",      // Pendiente Pago (Amarillo)
+        102: "badge-success text-white",      // Confirmada (Verde)
+        103: "badge-error text-white",        // Cancelada (Rojo)
+        104: "border-orange-500 bg-orange-50 text-orange-600", // Expirada (Naranja custom)
+        105: "badge-info text-white",         // Completada (Azul)
+        default: "badge-ghost"
     },
 
     DEFAULT: {

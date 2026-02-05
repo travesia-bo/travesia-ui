@@ -1,6 +1,6 @@
 import api from '../../../lib/axios';
 import type { SellerPackage } from "../types";
-import type { CreateReservationRequest } from "../types";
+import type { CreateReservationRequest, ReservationResponse } from "../types";
 
 // ... otros métodos ...
 
@@ -20,4 +20,9 @@ export const searchClients = async (query: string) => {
 // Crear Reserva
 export const createReservation = async (data: CreateReservationRequest): Promise<void> => {
     await api.post('/sales/reservations', data);
+};
+
+export const getMyReservations = async (): Promise<ReservationResponse[]> => {
+    const { data } = await api.get<ReservationResponse[]>("/sales/reservations");
+    return data;
 };

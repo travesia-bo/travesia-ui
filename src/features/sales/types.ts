@@ -78,3 +78,29 @@ export interface ClientSearchResult {
     facultyName: string;
     careerName: string;
 }
+
+export interface ReservationClient {
+    clientId: number;
+    fullName: string;
+    identityCard: string;
+    phoneNumber: number;
+    clientTypeName: string;
+    clientTypeCode: number;
+    agreedPrice: number;
+    totalPaid: number;
+    pendingAmount: number;
+}
+
+export interface ReservationResponse {
+    id: number;
+    reservationCode: string;
+    statusName: string;
+    statusCode: number;
+    packageName: string;
+    totalPrice: number;
+    reservationDate: string;
+    expirationDate: string | null; 
+    userNameSeller: string;        
+    commissionSeller: number;      
+    clients: ReservationClient[];
+}

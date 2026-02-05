@@ -6,8 +6,9 @@ export const PARAM_CATEGORIES = {
     CLIENT_TYPE: 'CLIENT_TYPE',       // Ej: 701 (Estudiante), 702 (Profesional)
     PAYMENT_METHOD: 'PAYMENT_METHOD', // Ej: 401 (QR), 402 (Transferencia)
     PRODUCT_CATEGORY: 'PRODUCT_CATEGORY', // Ej: 601 (Electrónica)
-    RESERVATION_STATUS: 'RESERVATION_STATUS', // Ej: Confirmada, Cancelada
     PROVIDER_STATUS: 'PROVIDER_STATUS', // 121, 122...
+    RESERVATION_STATUS: 'RESERVATION_STATUS', // Ej: Confirmada, Cancelada
+    TRANSACTION_STATUS: 'TRANSACTION_STATUS',
     COMMISSION_TYPE: 'COMMISSION_TYPE', 
 } as const;
 
