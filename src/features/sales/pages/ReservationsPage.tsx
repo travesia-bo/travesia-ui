@@ -177,17 +177,17 @@ export const ReservationsPage = () => {
     ];
 
     return (
-        <div className="p-6 space-y-6 animate-fade-in">
+        <div className="p-4 md:p-6 space-y-6 animate-fade-in pb-20 md:pb-6">
             {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 md:gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-base-content">Control de Reservaciones</h1>
-                    <p className="text-sm text-base-content/60">Monitoreo de ventas, pagos y comisiones de vendedores.</p>
+                    <h1 className="text-xl md:text-2xl font-bold text-base-content">Control de Reservaciones</h1>
+                    <p className="text-xs md:text-sm text-base-content/60">Monitoreo de ventas, pagos y comisiones de vendedores.</p>
                 </div>
             </div>
 
             {/* Filtros */}
-            <div className={`grid grid-cols-1 ${canManageCommissions ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-4 bg-base-100 p-4 rounded-xl shadow-sm border border-base-200`}>
+            <div className={`grid grid-cols-1 ${canManageCommissions ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-4 bg-base-100 p-4 rounded-xl shadow-sm border border-base-200 items-end`}>
                 <div className="md:col-span-1">
                     <TravesiaInput 
                         label="Búsqueda Inteligente" 
@@ -224,30 +224,102 @@ export const ReservationsPage = () => {
                     </div>
                 )}
 
-                {/* KPI de Ganancia Real */}
-                <div className="flex flex-col items-end justify-center h-full pb-1">
-                    <div className="flex items-center gap-1.5 mb-1">
+                {/* KPI de Ganancia Real - Adaptado Mobile: Se alinea a la derecha en PC, ocupa ancho en móvil si es necesario */}
+                <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center h-full pb-1 pt-2 md:pt-0 border-t md:border-t-0 border-base-200 mt-2 md:mt-0">
+                    <div className="flex items-center gap-1.5 mb-0 md:mb-1">
                         <span className="text-[10px] uppercase font-black opacity-60 tracking-wider">Comisión acumulada</span>
                         <div className="badge badge-success badge-xs outline outline-1 outline-success/20"></div>
                     </div>
-                    <div className="flex items-center text-success font-mono font-black text-2xl gap-1">
-                        <span className="text-sm">Bs.</span>
-                        {totalCommissions.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    <div className="text-right">
+                        <div className="flex items-center justify-end text-success font-mono font-black text-xl md:text-2xl gap-1">
+                            <span className="text-sm">Bs.</span>
+                            {totalCommissions.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                        <span className="text-[9px] opacity-50 italic hidden md:block">
+                            Calculado sobre {filteredReservations.filter(r => r.statusCode === 102).length} ventas confirmadas
+                        </span>
                     </div>
-                    <span className="text-[9px] opacity-50 italic">
-                        Calculado sobre {filteredReservations.filter(r => r.statusCode === 102).length} ventas confirmadas
-                    </span>
                 </div>
-           
+            
             </div>
 
-            {/* Tabla Principal */}
-            <TravesiaTable 
-                data={filteredReservations} 
-                columns={columns} 
-                isLoading={isLoading}
-                rowClassName={getRowClassName} 
-            />
+            {/* ✅ VISTA DE ESCRITORIO (Tabla) */}
+            <div className="hidden md:block">
+                <TravesiaTable 
+                    data={filteredReservations} 
+                    columns={columns} 
+                    isLoading={isLoading}
+                    rowClassName={getRowClassName} 
+                />
+            </div>
+
+            {/* ✅ VISTA MÓVIL (Tarjetas) */}
+            <div className="md:hidden space-y-4">
+                {isLoading ? (
+                    <div className="flex justify-center py-8"><span className="loading loading-dots loading-lg text-primary"></span></div>
+                ) : filteredReservations.length === 0 ? (
+                    <div className="text-center py-10 opacity-50 italic text-sm">No se encontraron reservas</div>
+                ) : (
+                    filteredReservations.map(res => (
+                        <div 
+                            key={res.id}
+                            onClick={() => setSelectedReservation(res)}
+                            className={`p-4 rounded-xl border shadow-sm active:scale-[0.98] transition-transform cursor-pointer bg-base-100 relative overflow-hidden ${getRowClassName(res)}`}
+                        >
+                            {/* Header de la Tarjeta */}
+                            <div className="flex justify-between items-start mb-3">
+                                <div className="flex flex-col">
+                                    <div className="flex items-center gap-1.5">
+                                        <Hash size={14} className="text-primary" />
+                                        <span className="font-mono font-black text-base">{res.reservationCode}</span>
+                                    </div>
+                                    <span className="text-[10px] opacity-60 flex items-center gap-1">
+                                        <Calendar size={10} /> {new Date(res.reservationDate).toLocaleDateString()}
+                                    </span>
+                                </div>
+                                <TravesiaBadge label={res.statusName} code={res.statusCode} type="RESERVATION_STATUS" />
+                            </div>
+
+                            {/* Cuerpo de la Tarjeta */}
+                            <div className="mb-3">
+                                <div className="text-sm font-bold line-clamp-2 leading-tight mb-1">{res.packageName}</div>
+                                <div className="flex items-center gap-2 text-[11px] opacity-70">
+                                    <Users size={12} /> 
+                                    <span>{res.clients.length} pasajero(s)</span>
+                                </div>
+                            </div>
+
+                            {/* Footer de la Tarjeta (Finanzas) */}
+                            <div className="flex justify-between items-end border-t border-base-content/10 pt-3 mt-1">
+                                <div className="flex flex-col">
+                                    {/* Comisión */}
+                                    <div className="flex flex-col">
+                                        <span className="text-[9px] uppercase font-bold opacity-40">Mi Ganancia</span>
+                                        <div className="flex items-center text-success font-mono font-black text-lg gap-0.5">
+                                            <span className="text-xs">Bs.</span>
+                                            {res.commissionSeller.toFixed(2)}
+                                        </div>
+                                    </div>
+                                    {/* Vendedor (si aplica) */}
+                                    {canManageCommissions && (
+                                        <span className="text-[10px] font-bold opacity-50 mt-1">@{res.userNameSeller}</span>
+                                    )}
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                    <div className="text-right">
+                                        <div className="text-[9px] uppercase font-bold opacity-40">Total</div>
+                                        <div className="font-mono font-bold text-sm">Bs. {res.totalPrice.toFixed(2)}</div>
+                                    </div>
+                                    <button className="btn btn-sm btn-circle btn-ghost bg-base-200 text-info">
+                                        <Eye size={18} />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
 
             {/* Modal de Detalle */}
             {selectedReservation && (
