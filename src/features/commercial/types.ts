@@ -17,6 +17,8 @@ export interface Package {
     imageUrl?: string;
     imageQrUrl?: string;
     peopleCount: number;
+
+    availableStock: number;
     
     totalPrice: number;     
     pricePerPerson: number;
@@ -25,6 +27,10 @@ export interface Package {
     commissionTypeCode: number; 
     commissionTypeName: string;
     commissionValue: number;
+    
+    isPriceNegotiable: boolean;
+    isPublic: boolean; // Público/Privado
+    status: boolean; // Activo/Inactivo
     
     details: PackageDetail[];
 }

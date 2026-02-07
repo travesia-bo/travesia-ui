@@ -3,12 +3,12 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { usePackages } from '../hooks/usePackages';
 import { useParameters } from '../../../hooks/useParameters';
 import { PARAM_CATEGORIES } from '../../../config/constants';
-import { Package, PackageDetail } from '../types';
+import type { Package, PackageDetail } from '../types';
 import { useCheckPermission } from '../../../hooks/useCheckPermission';
 // Servicios
 import { updatePackageStatus, updatePackageVisibility, deletePackage } from '../services/packageService';
 // UI Components
-import { TravesiaTable, Column } from '../../../components/ui/TravesiaTable';
+import { TravesiaTable, type Column } from '../../../components/ui/TravesiaTable';
 import { TravesiaInput } from '../../../components/ui/TravesiaInput';
 import { TravesiaSelect } from '../../../components/ui/TravesiaSelect';
 import { CrudButtons, BtnCreate } from '../../../components/ui/CrudButtons';
@@ -16,10 +16,11 @@ import { TravesiaSwitch } from '../../../components/ui/TravesiaSwitch';
 import { PackageDetailsModal } from '../components/PackageDetailsModal'; // Modal de SOLO LECTURA
 import { PackageFormModal } from '../components/PackageFormModal';       // ✅ NUEVO: Modal de CREAR/EDITAR
 import { ConfirmationModal } from '../../../components/ui/ConfirmationModal';
-import { Eye, Users, Package as BoxIcon, Globe, Power, Luggage, Boxes } from 'lucide-react';
+import { Eye, Users, Package as BoxIcon, Globe, Boxes } from 'lucide-react';
 import { useToast } from '../../../context/ToastContext';
 import { PERMISSIONS } from '../../../config/permissions';
-import { ReactNode } from "react";
+
+
 export const PackagesPage = () => {
     const { success, error: toastError } = useToast();
     const queryClient = useQueryClient();

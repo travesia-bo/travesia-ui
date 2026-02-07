@@ -16,6 +16,7 @@ export const PaymentHistoryModal = ({ report, onClose }: Props) => {
         <TravesiaModal
             isOpen={!!report}
             onClose={onClose}
+            closeOnOutsideClick={true}
             title={
                 <div className="flex flex-col">
                     <span className="flex items-center gap-2">

@@ -167,7 +167,7 @@ if (!pkg) return null;
                 </div>
 
                 {/* 2. AREA DE FORMULARIO: Scroll interno */}
-                <div className="flex-1 overflow-y-auto overflow-x-hidden px-1 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto overflow-x-hidden p-1 pb-6 custom-scrollbar">
                     <FormProvider {...methods}>
                         <form className="space-y-6">
                             
@@ -219,7 +219,7 @@ if (!pkg) return null;
                                     
                                     {/* Mensaje de error fijo al final del scroll para mayor visibilidad */}
                                     {Object.keys(errors).length > 0 && (
-                                        <div className="alert alert-error text-white text-xs font-bold shadow-lg">
+                                        <div className="alert alert-error text-white text-xs font-bold shadow-lg mt-4">
                                             <AlertCircle size={16}/>
                                             <span>Faltan datos obligatorios en los pasajeros.</span>
                                         </div>

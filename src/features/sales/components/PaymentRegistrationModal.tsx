@@ -7,7 +7,7 @@ import { Wallet, Trash2, AlertTriangle, CheckCircle2, User, Package, Plus } from
 
 // Servicios y Tipos
 import { createAppliedPayment, getActiveDebtors } from "../services/financialService";
-import { ClientStatementResponse, PackageDebtResponse } from "../types";
+import type { ClientStatementResponse, PackageDebtResponse } from "../types";
 import { useParameters } from "../../../hooks/useParameters";
 import { PARAM_CATEGORIES } from "../../../config/constants";
 import { useToast } from "../../../context/ToastContext";

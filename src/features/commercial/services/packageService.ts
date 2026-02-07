@@ -1,7 +1,7 @@
 import api from '../../../lib/axios';
-import { Package, PackageStatusUpdate, PackageVisibilityUpdate } from '../types';
-import { 
-    Package, CreatePackageRequest, PackageDetailResponse, 
+import type { 
+    Package, PackageStatusUpdate, PackageVisibilityUpdate,
+    CreatePackageRequest, PackageDetailResponse, 
     AddPackageDetailRequest, UpdatePackageDetailRequest 
 } from "../types";
 

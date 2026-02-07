@@ -2,7 +2,8 @@ import DatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { es } from "date-fns/locale/es";
 import { Calendar, X } from "lucide-react";
-import { Controller, Control } from "react-hook-form";
+import { Controller, type Control } from "react-hook-form";
+import type { ReactNode } from "react";
 
 // Registramos español
 registerLocale("es", es);
@@ -12,7 +13,7 @@ interface Props {
     name: string;
     control: Control<any>;
     placeholder?: string;
-    helperText?: string;
+    helperText?: ReactNode;
     disabled?: boolean;
     minDate?: Date;
     maxDate?: Date;
@@ -48,7 +49,7 @@ export const TravesiaDateTimePicker = ({
 
                         <DatePicker
                             selected={value ? new Date(value) : null}
-                            onChange={(date) => {
+                            onChange={(date: Date | null) => {
                                 if (date) {
                                     const dateToSave = new Date(date);
                                     // Si NO es cumpleaños, guardamos fin del día (vencimientos)

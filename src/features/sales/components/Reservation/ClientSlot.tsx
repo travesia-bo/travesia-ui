@@ -1,21 +1,21 @@
+// ClientSlot.tsx
 import { useState } from "react";
 import { useFormContext } from "react-hook-form";
-import { UserPlus, Search, CheckCircle2, BookOpen } from "lucide-react";
+import { UserPlus, Search, CheckCircle2, BookOpen, AlertCircle } from "lucide-react"; // Asegúrate de importar AlertCircle
 import { useQuery } from "@tanstack/react-query";
 
 // UI Components
 import { TravesiaInput } from "../../../../components/ui/TravesiaInput";
 import { TravesiaSelect } from "../../../../components/ui/TravesiaSelect";
 import { RichSelect } from "../../../../components/ui/RichSelect";
+import { TravesiaDateTimePicker } from "../../../../components/ui/TravesiaDateTimePicker";
 
 // Servicios y Hooks
 import { useParameters } from "../../../../hooks/useParameters";
 import { useCities } from "../../../../hooks/useCities";
 import { searchClients } from "../../services/reservationService";
 import { getCareers } from "../../services/academicService";
-// Usamos 'import type' para evitar errores de compilación con interfaces
 import type { ClientSearchResult } from "../../types";
-import { TravesiaDateTimePicker } from "../../../../components/ui/TravesiaDateTimePicker";
 
 interface Props {
     index: number;
@@ -24,37 +24,25 @@ interface Props {
 }
 
 export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
-    const { register, control, setValue, watch, formState: { errors } } = useFormContext();
+    // 1. ✅ Extraemos 'clearErrors'
+    const { register, control, setValue, watch, clearErrors, formState: { errors } } = useFormContext();
     const [mode, setMode] = useState<"EXISTING" | "NEW">("EXISTING");
 
-    // --- 1. HOOKS DE DATOS ---
-
-    // A. Parámetros del Sistema (Listas desplegables)
-    // Nota: Verifica en tu BD si es "GENDER_TYPES" (plural) o "GENDER_TYPE" (singular).
-    // Aquí uso defensividad (|| []) para que no explote si el nombre está mal.
+    // --- HOOKS DE DATOS (Sin cambios) ---
     const { parameters: genderOptions, isLoading: loadingGenders } = useParameters("GENDER_TYPE");
     const { parameters: clientTypeOptions, isLoading: loadingClientTypes } = useParameters("CLIENT_TYPE");
-
-    // B. Ciudades
     const { data: cities = [], isLoading: loadingCities } = useCities();
-
-    // C. Carreras (Cacheado)
     const { data: careers = [], isLoading: loadingCareers } = useQuery({
         queryKey: ['careers'],
         queryFn: getCareers,
         staleTime: 1000 * 60 * 60
     });
-
-    // D. Clientes (Para el buscador)
-    // ✅ CORRECCIÓN CLAVE: Cargamos los clientes aquí para pasarlos a 'options'
     const { data: clients = [], isLoading: loadingClients } = useQuery({
         queryKey: ['clients', 'all'],
-        queryFn: () => searchClients(''), // Trae la lista inicial
+        queryFn: () => searchClients(''),
     });
 
-    // --- 2. LÓGICA DE FORMULARIO ---
-
-    // Acceso seguro a errores en arrays profundos
+    // --- LÓGICA DE ERRORES ---
     const clientErrors = errors.clients as any;
     const currentErrors = clientErrors?.[index]?.newClientData || {};
     const clientSelectError = clientErrors?.[index]?.clientId?.message;
@@ -64,14 +52,17 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
     const paternal = watch(`clients.${index}.newClientData.paternalSurname`);
     const existingId = watch(`clients.${index}.clientId`);
 
-    // En ClientSlot.tsx dentro de handleModeChange
+    // 2. ✅ Función corregida para LIMPIAR errores al cambiar de modo
     const handleModeChange = (newMode: "EXISTING" | "NEW") => {
         setMode(newMode);
+        
+        // Limpiamos el error global del slot inmediatamente
+        clearErrors(`clients.${index}.clientId`); 
+
         if (newMode === "EXISTING") {
             setValue(`clients.${index}.newClientData`, null);
         } else {
             setValue(`clients.${index}.clientId`, null);
-            // Inicializar con null o un valor por defecto numérico, NO string vacío
             setValue(`clients.${index}.newClientData.clientType`, undefined);
             setValue(`clients.${index}.newClientData.genderType`, undefined);
         }
@@ -122,35 +113,54 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
                         </button>
                     </div>
 
-                    {/* === MODO 1: BUSCAR CLIENTE (Corregido) === */}
+                    {/* === MODO 1: BUSCAR CLIENTE === */}
                     {mode === "EXISTING" && (
-                        <div className="space-y-3">
+                        <div className="space-y-1"> {/* space-y-1 para acercar el error al input */}
                             <RichSelect
                                 label="Buscar Cliente"
                                 placeholder="Seleccione un cliente..."
                                 isLoading={loadingClients}
-                                // ✅ CORRECCIÓN: Pasamos la data de 'useQuery' mapeada
                                 options={(clients || []).map((c: ClientSearchResult) => ({
                                     value: c.id,
                                     label: c.fullName,
                                     subtitle: `${c.careerName} | ${c.phoneNumber}`
                                 }))}
                                 value={watch(`clients.${index}.clientId`)}
-                                onChange={(val) => setValue(`clients.${index}.clientId`, Number(val))}
-                                error={clientSelectError}
+                                onChange={(val) => {
+                                    setValue(`clients.${index}.clientId`, Number(val));
+                                    // 3. ✅ Limpiamos el error apenas seleccione algo
+                                    clearErrors(`clients.${index}.clientId`);
+                                }}
+                                // 4. ✅ Ocultamos el error interno del componente para renderizarlo nosotros
+                                error={undefined} 
                             />
+                            
+                            {/* 5. ✅ Renderizado MANUAL del error con WRAP y CSS corregido */}
+                            {clientSelectError && (
+                                <div className="flex items-start gap-1 mt-1 animate-fade-in">
+                                    <AlertCircle size={14} className="text-error mt-0.5 shrink-0" />
+                                    <span className="text-xs text-error font-medium whitespace-normal break-words leading-tight">
+                                        {clientSelectError}
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     )}
 
-                    {/* === MODO 2: CREAR CLIENTE (Blindado) === */}
+                    {/* === MODO 2: CREAR CLIENTE === */}
                     {mode === "NEW" && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                             {/* Nota: Al estar en modo NEW, react-hook-form validará los campos internos
+                                 y el error global de 'clientId' desaparecerá eventualmente al validar,
+                                 pero el 'clearErrors' del handleModeChange ayuda visualmente. */}
+                            
                             <TravesiaInput
                                 label="Nombres"
                                 placeholder="Ej: Juan Pablo"
                                 {...register(`clients.${index}.newClientData.firstName`)}
                                 error={currentErrors.firstName?.message}
                             />
+                             {/* ... resto de inputs (Paterno, Materno, CI, etc.) ... */}
                             <div className="grid grid-cols-2 gap-2">
                                 <TravesiaInput
                                     label="Ap. Paterno"
@@ -174,10 +184,10 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
                                 />
                                 <TravesiaDateTimePicker
                                     label="Fecha Nac."
-                                    name={`clients.${index}.newClientData.birthDate`} // Asegúrate de que el nombre coincida con tu form
-                                    control={control} // Necesitas pasar 'control' al ClientSlot
+                                    name={`clients.${index}.newClientData.birthDate`}
+                                    control={control}
                                     isBirthDate={true}
-                                    maxDate={new Date()} // No pueden nacer en el futuro
+                                    maxDate={new Date()}
                                     helperText={currentErrors.birthDate?.message}
                                 />
                             </div>
@@ -192,7 +202,6 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
                                 />
                                 <TravesiaSelect
                                     label="Ciudad"
-                                    // Blindaje: (cities || [])
                                     options={(cities || []).map(c => ({ value: c.id, label: c.name }))}
                                     isLoading={loadingCities}
                                     {...register(`clients.${index}.newClientData.cityId`, { valueAsNumber: true })}
@@ -214,7 +223,6 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
                                         }))
                                     ]}
                                     isLoading={loadingClientTypes}
-                                    // ✅ Agrega valueAsNumber para que React Hook Form entregue un número al Schema
                                     {...register(`clients.${index}.newClientData.clientType`, { valueAsNumber: true })}
                                     error={currentErrors.clientType?.message}
                                 />
@@ -222,7 +230,6 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
                                 <RichSelect
                                     label="Carrera"
                                     placeholder="Buscar carrera..."
-                                    // ✅ BLINDAJE ANTI-CRASH
                                     options={(careers || []).map(c => ({
                                         value: c.id,
                                         label: c.name,
@@ -236,7 +243,6 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
                             </div>
 
                             <div className="grid grid-cols-2 gap-2">
-
                                 <TravesiaSelect
                                     label="Género"
                                     options={[
@@ -247,11 +253,9 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
                                         }))
                                     ]}
                                     isLoading={loadingGenders}
-                                    // ✅ CLAVE: valueAsNumber activado
                                     {...register(`clients.${index}.newClientData.genderType`, { valueAsNumber: true })}
                                     error={currentErrors.genderType?.message}
                                 />
-
                                 <TravesiaInput
                                     label="Email"
                                     type="email"

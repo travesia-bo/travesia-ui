@@ -1,9 +1,9 @@
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 import { TravesiaModal } from "./TravesiaModal";
 import { TravesiaButton } from "./TravesiaButton";
 import { AlertTriangle, Info, CheckCircle } from "lucide-react";
 
-type ModalVariant = "danger" | "warning" | "info" | "success";
+type ModalVariant = "danger" | "warning" | "info" | "success" | "primary";
 
 interface Props {
     isOpen: boolean;
@@ -65,6 +65,7 @@ export const ConfirmationModal = ({
         <TravesiaModal
             isOpen={isOpen}
             onClose={onClose}
+            closeOnOutsideClick={true}
             title="" // Dejamos vacío el título del header estándar para personalizar el cuerpo
             size="sm" // Pequeño y centrado
         >

@@ -1,6 +1,6 @@
 import { TravesiaModal } from "../../../components/ui/TravesiaModal";
-import { ReservationResponse } from "../types";
-import { User, AlertCircle, Info, CreditCard, CheckCircle2 } from "lucide-react";
+import type { ReservationResponse } from "../types";
+import { User, AlertCircle, CheckCircle2 } from "lucide-react";
 
 interface Props {
     reservation: ReservationResponse | null;
@@ -14,6 +14,7 @@ export const ReservationDetailModal = ({ reservation, onClose }: Props) => {
         <TravesiaModal
             isOpen={!!reservation}
             onClose={onClose}
+            closeOnOutsideClick={true}
             title={
                 <div className="flex flex-col">
                     <span>Detalle de Reserva</span>
