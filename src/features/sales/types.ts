@@ -122,3 +122,36 @@ export interface ClientFinancialReportResponse {
     balance: number;
     paymentHistory: PaymentHistoryResponse[];
 }
+
+// RQUEST PARA REGISTRAR PAGO
+export interface CreatePaymentApplication {
+    reservationClientId: number;
+    amountToApply: number;
+}
+
+export interface CreatePaymentRequest {
+    totalAmount: number;
+    paymentMethodType: number;
+    bankReference?: string;
+    proofUrl?: string | null;
+    applications: CreatePaymentApplication[];
+}
+
+// RESPUESTA DE DEUDORES (Active Debtors)
+export interface PackageDebtResponse {
+    id: number; // reservationClientId
+    packageName: string;
+    reservationCode: string;
+    statusName: string;
+    agreedPrice: number;
+    totalPaid: number;
+    balance: number;
+}
+
+export interface ClientStatementResponse {
+    id: number; // client id
+    clientFullName: string;
+    identityCard: string;
+    totalGlobalBalance: number;
+    reservations: PackageDebtResponse[];
+}

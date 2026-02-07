@@ -1,59 +1,59 @@
-import { forwardRef } from "react";
+import { forwardRef, useEffect, useState } from 'react';
 
-interface Props extends React.InputHTMLAttributes<HTMLInputElement> {
-    label: string;
+interface Props extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'value'> {
+    label?: string;
     error?: string;
-    badge?: React.ReactNode;   // Para "Auto-calculado"
-    suffix?: React.ReactNode;  // Para "%" o "Bs"
-    helperText?: string;       // Para el texto de ayuda inferior
+    value: number;
+    onValueChange: (val: number) => void; // ✅ Propiedad personalizada
+    prefix?: string;
+    shakeKey?: number;
 }
 
 export const TravesiaFinancialInput = forwardRef<HTMLInputElement, Props>(
-    ({ label, error, badge, suffix, helperText, className = "", ...props }, ref) => {
-        return (
-            <div className="form-control w-full">
-                {/* LABEL + BADGE */}
-                <label className="label cursor-pointer justify-start gap-2 pb-1">
-                    <span className="label-text text-xs font-bold uppercase opacity-60">
-                        {label}
-                    </span>
-                    {badge}
-                </label>
+    ({ label, error, value, onValueChange, className, prefix = "Bs.", shakeKey, ...props }, ref) => {
+        const [isShaking, setIsShaking] = useState(false);
+        
+        useEffect(() => {
+            if (shakeKey && shakeKey > 0) {
+                setIsShaking(true);
+                const timer = setTimeout(() => setIsShaking(false), 500);
+                return () => clearTimeout(timer);
+            }
+        }, [shakeKey]);
 
-                {/* INPUT GROUP */}
-                {/* Usamos 'flex' para asegurar que estén en línea y 'w-full' para el ancho total */}
-                <div className={`flex items-center w-full ${suffix ? "join" : ""}`}>
+        return (
+            <div className={`form-control w-full ${isShaking ? 'animate-shake' : ''}`}>
+                {label && (
+                    <label className="label py-1">
+                        <span className={`label-text font-semibold ${error ? "text-error" : "opacity-70"}`}>
+                            {label}
+                        </span>
+                    </label>
+                )}
+                <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-mono text-sm">
+                        {prefix}
+                    </span>
                     <input
                         ref={ref}
-                        className={`
-                            input input-bordered 
-                            /* Si hay sufijo, usamos flex-1 para llenar espacio restante y quitamos borde derecho */
-                            ${suffix ? "join-item flex-1 min-w-0 rounded-r-none border-r-0" : "w-full"} 
-                            ${error ? "input-error text-error" : ""}
-                            ${className}
-                        `}
+                        type="number"
+                        className={`input input-bordered w-full pl-3 font-mono ${error ? 'input-error' : ''} ${className}`}
+                        value={value === 0 ? '' : value} // Muestra vacío si es 0 para mejor UX al escribir
+                        onChange={(e) => {
+                            // ✅ Convertimos el evento a número limpio
+                            const val = parseFloat(e.target.value);
+                            onValueChange(isNaN(val) ? 0 : val);
+                        }}
+                        onWheel={(e) => e.currentTarget.blur()} // Evita cambiar valor con scroll del mouse
+                        step="0.01"
+                        min="0"
                         {...props}
                     />
-                    
-                    {/* SUFIJO (Si existe) */}
-                    {suffix && (
-                        <span className="join-item btn btn-md no-animation bg-base-200 border-base-300 border-l-0 px-4 cursor-default hover:bg-base-200 hover:border-base-300 shrink-0 text-base-content/70 font-bold">
-                            {suffix}
-                        </span>
-                    )}
                 </div>
-
-                {/* MENSAJES DE ERROR O AYUDA */}
                 {error && (
-                    <span className="text-error text-xs mt-1 block animate-fade-in font-medium">
-                        {error}
-                    </span>
-                )}
-                
-                {!error && helperText && (
-                    <p className="text-xs text-base-content/50 mt-1 italic animate-fade-in ml-1">
-                        {helperText}
-                    </p>
+                    <label className="label py-0.5">
+                        <span className="label-text-alt text-error">{error}</span>
+                    </label>
                 )}
             </div>
         );

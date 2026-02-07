@@ -13,6 +13,7 @@ import { TravesiaInput } from '../../../components/ui/TravesiaInput';
 import { BtnCreate, CrudButtons } from '../../../components/ui/CrudButtons';
 import { PaymentHistoryModal } from '../components/PaymentHistoryModal';
 import { useToast } from '../../../context/ToastContext';
+import { PaymentRegistrationModal } from '../components/PaymentRegistrationModal';
 
 export const FinancialReportPage = () => {
     const { success, error: toastError } = useToast();
@@ -36,12 +37,12 @@ export const FinancialReportPage = () => {
         );
     }, [reports, searchTerm]);
 
-    // 4. Handlers (Placeholders para futura lógica)
-    const handleCreatePayment = () => {
-        // TODO: Abrir modal de creación de pago general
-        success("Próximamente: Crear pago nuevo");
-    };
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false); 
 
+    // 4. Handlers
+    const handleCreatePayment = () => {
+        setIsCreateModalOpen(true); 
+    };
     const handleEdit = (row: ClientFinancialReportResponse) => {
         // TODO: Lógica de edición
         success(`Editar pagos de ${row.clientFullName}`);
@@ -54,7 +55,7 @@ export const FinancialReportPage = () => {
 
     // 5. Columnas
     const columns: Column<ClientFinancialReportResponse>[] = [
-{
+    {
             header: 'Cliente',
             accessorKey: 'clientFullName',
             render: (row) => (
@@ -176,6 +177,12 @@ export const FinancialReportPage = () => {
             <PaymentHistoryModal 
                 report={selectedReport} 
                 onClose={() => setSelectedReport(null)} 
+            />
+
+            {/* Modal de Creación de Pago (Nuevo) */}
+            <PaymentRegistrationModal 
+                isOpen={isCreateModalOpen} 
+                onClose={() => setIsCreateModalOpen(false)} 
             />
         </div>
     );

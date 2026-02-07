@@ -8,10 +8,10 @@ import {
 
 // Servicios y Tipos
 import { getSellerCatalog } from "../services/reservationService";
-import { SellerPackage } from "../types";
+import type { SellerPackage } from "../types";
 
 // UI Components
-import { TravesiaTable, Column } from "../../../components/ui/TravesiaTable";
+import { TravesiaTable, type Column } from "../../../components/ui/TravesiaTable";
 import { TravesiaInput } from "../../../components/ui/TravesiaInput";
 import { CatalogFilters } from "../components/CatalogFilters";
 import { TravesiaButton } from "../../../components/ui/TravesiaButton";
