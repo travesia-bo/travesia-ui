@@ -104,3 +104,21 @@ export interface ReservationResponse {
     commissionSeller: number;      
     clients: ReservationClient[];
 }
+
+export interface PaymentHistoryResponse {
+    id: number;
+    amount: number;
+    date: string; // LocalDateTime viene como string ISO
+    paymentMethodType: number; // Código del parámetro (ej: 401)
+    bankReference: string;
+}
+
+export interface ClientFinancialReportResponse {
+    id: number;
+    clientFullName: string;
+    packageName: string;
+    agreedPrice: number;
+    totalPaid: number;
+    balance: number;
+    paymentHistory: PaymentHistoryResponse[];
+}
