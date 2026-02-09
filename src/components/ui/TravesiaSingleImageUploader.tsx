@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { ImagePlus, X, FileImage, AlertCircle } from "lucide-react";
+import { ImagePlus, FileImage, AlertCircle } from "lucide-react";
 import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB, ALLOWED_IMAGE_TYPES } from "../../config/storage";
 import { useToast } from "../../context/ToastContext";
 import { BtnChange, BtnRemove } from "./CrudButtons";

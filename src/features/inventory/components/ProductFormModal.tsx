@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { MapPin, Box, Store, Tag, DollarSign } from "lucide-react"; 
+import { MapPin, Box, Store, Tag } from "lucide-react"; 
 
 // Hooks y Servicios
 import { createProduct, updateProduct } from "../services/productService";
@@ -24,7 +24,7 @@ import { TravesiaStepper } from "../../../components/ui/TravesiaStepper";
 import { TravesiaSingleImageUploader } from "../../../components/ui/TravesiaSingleImageUploader";
 
 // Types
-import { CreateProductRequest, Product } from "../types";
+import type { CreateProductRequest, Product } from "../types";
 
 interface Props {
     isOpen: boolean;
@@ -42,7 +42,7 @@ export const ProductFormModal = ({ isOpen, onClose, productToEdit }: Props) => {
     // Hooks de datos
     const { data: providers = [], isLoading: loadingProviders } = useProviders();
     const { data: locations = [], isLoading: loadingLocations } = useLocations();
-    const { parameters: categories, isLoading: loadingCategories } = useParameters(PARAM_CATEGORIES.PRODUCT_CATEGORY);
+    const { parameters: categories } = useParameters(PARAM_CATEGORIES.PRODUCT_CATEGORY);
 
     // Estados Locales
     const [currentStep, setCurrentStep] = useState(1);

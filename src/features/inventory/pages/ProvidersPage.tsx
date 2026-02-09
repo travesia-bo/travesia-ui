@@ -4,14 +4,13 @@ import { useCities } from '../../../hooks/useCities';
 import { useParameters } from '../../../hooks/useParameters';
 import { PARAM_CATEGORIES } from '../../../config/constants';
 // Imports renombrados a Travesia
-import { TravesiaTable, Column } from '../../../components/ui/TravesiaTable'; // Antes ComerziaTable
+import { TravesiaTable, type Column } from '../../../components/ui/TravesiaTable'; // Antes ComerziaTable
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 import { TravesiaInput } from '../../../components/ui/TravesiaInput';       // Antes ComerziaInput
 import { TravesiaSelect } from '../../../components/ui/TravesiaSelect';     // Antes ComerziaSelect
-import { TravesiaButton } from '../../../components/ui/TravesiaButton';     // Antes ComerziaButton
 import { CrudButtons, BtnCreate } from '../../../components/ui/CrudButtons';           // ¡Ahora sí existe!
 import { IconRenderer } from '../../../components/ui/IconRenderer';
-import { Provider } from '../types';
+import { type Provider } from '../types/index';
 import { ProviderFormModal } from '../components/ProviderFormModal';
 import { useMutation, useQueryClient } from '@tanstack/react-query'; // Importar
 import { deleteProvider } from '../services/providerService'; // Importar servicio delete
@@ -62,15 +61,6 @@ export const ProvidersPage = () => {
             toastError("Error al eliminar. Verifique si tiene dependencias.");
         }
     });
-
-
-    // 2. FUNCIÓN MANEJADORA DE ELIMINACIÓN
-    const handleDelete = (id: number) => {
-        // Confirmación simple del navegador (luego podemos hacer un modal bonito)
-        if (window.confirm("¿Estás seguro de eliminar este proveedor? Esta acción no se puede deshacer.")) {
-            deleteMutation.mutate(id);
-        }
-    };
     
     // 4. Definición de Columnas Actualizada
     const columns: Column<Provider>[] = [

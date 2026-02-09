@@ -1,6 +1,5 @@
 import api from '../lib/axios';
-import { City } from '../features/inventory/types';
-import { ApiResponse } from '../types/api';
+import { type City } from '../features/inventory/types/index';
 
 export const getCities = async (): Promise<City[]> => {
     // Asumiendo que devuelve array directo según tu ejemplo, si tiene wrapper ajustamos

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { MapPin, Package, Users, Store } from 'lucide-react';
+import { MapPin, Package, Users } from 'lucide-react';
 
 // Hooks y Servicios
 import { useProducts } from '../hooks/useProducts';
@@ -11,7 +11,7 @@ import { PARAM_CATEGORIES } from '../../../config/constants'; // ✅ Importar Co
 import { useToast } from '../../../context/ToastContext';
 
 // UI Components
-import { TravesiaTable, Column } from '../../../components/ui/TravesiaTable';
+import { TravesiaTable, type Column } from '../../../components/ui/TravesiaTable';
 import { TravesiaInput } from '../../../components/ui/TravesiaInput';
 import { TravesiaSelect } from '../../../components/ui/TravesiaSelect';
 import { RichSelect } from '../../../components/ui/RichSelect';
@@ -22,7 +22,7 @@ import { TravesiaSwitch } from '../../../components/ui/TravesiaSwitch';
 import { ProductFormModal } from '../components/ProductFormModal'; 
 
 // Types
-import { Product } from '../types';
+import { type Product } from '../types';
 import { PERMISSIONS } from '../../../config/permissions';
 import { useCheckPermission } from '../../../hooks/useCheckPermission';
 

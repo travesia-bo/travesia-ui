@@ -48,7 +48,7 @@ export const FinancialReportPage = () => {
         success(`Editar pagos de ${row.clientFullName}`);
     };
 
-    const handleDelete = (row: ClientFinancialReportResponse) => {
+    const handleDelete = (_row: ClientFinancialReportResponse) => {
         // TODO: Lógica de borrado (quizás borrar el último pago?)
         toastError("Función de eliminar no implementada aún");
     };

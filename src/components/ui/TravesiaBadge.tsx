@@ -1,4 +1,4 @@
-import { BadgeType, getBadgeStyle } from "../../config/badgeConfig";
+import { type BadgeType, getBadgeStyle } from "../../config/badgeConfig";
 
 interface Props {
     label: string;           // El texto a mostrar (ej: "Hospedaje")

@@ -1,6 +1,5 @@
 import api from '../lib/axios';
-import { SystemParameter } from '../config/constants';
-import { ApiResponse } from '../types/api';
+import { type SystemParameter } from '../config/constants';
 
 export const getParametersByCategory = async (category: string): Promise<SystemParameter[]> => {
     // CORRECCIÓN: Ajustamos la URL y el nombre del parámetro según tu backend

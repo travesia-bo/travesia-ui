@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, Hash, Users, Calendar, Eye, DollarSign } from 'lucide-react';
+import { Hash, Users, Calendar, Eye } from 'lucide-react';
 
 // Hooks y Servicios
 import { useQuery } from '@tanstack/react-query';
@@ -10,7 +10,7 @@ import { useCheckPermission } from '../../../hooks/useCheckPermission';
 import { PERMISSIONS } from '../../../config/permissions';
 
 // UI Components
-import { TravesiaTable, Column } from '../../../components/ui/TravesiaTable';
+import { TravesiaTable, type Column } from '../../../components/ui/TravesiaTable';
 import { TravesiaInput } from '../../../components/ui/TravesiaInput';
 import { TravesiaSelect } from '../../../components/ui/TravesiaSelect';
 import { TravesiaBadge } from '../../../components/ui/TravesiaBadge';

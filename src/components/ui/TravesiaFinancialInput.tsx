@@ -7,10 +7,13 @@ interface Props extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onCha
     onValueChange: (val: number) => void; // ✅ Propiedad personalizada
     prefix?: string;
     shakeKey?: number;
+    badge?: React.ReactNode; 
+    suffix?: string;
+    helperText?: string;
 }
 
 export const TravesiaFinancialInput = forwardRef<HTMLInputElement, Props>(
-    ({ label, error, value, onValueChange, className, prefix = "Bs.", shakeKey, ...props }, ref) => {
+    ({ label, error, value, onValueChange, className, prefix = "Bs.", suffix, badge, helperText, shakeKey, ...props }, ref) => {
         const [isShaking, setIsShaking] = useState(false);
         
         useEffect(() => {
@@ -28,6 +31,7 @@ export const TravesiaFinancialInput = forwardRef<HTMLInputElement, Props>(
                         <span className={`label-text font-semibold ${error ? "text-error" : "opacity-70"}`}>
                             {label}
                         </span>
+                        {badge && <span className="label-text-alt">{badge}</span>}
                     </label>
                 )}
                 <div className="relative">
@@ -49,12 +53,19 @@ export const TravesiaFinancialInput = forwardRef<HTMLInputElement, Props>(
                         min="0"
                         {...props}
                     />
+                    {suffix && (
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-mono text-sm">
+                            {suffix}
+                        </span>
+                    )}
                 </div>
-                {error && (
-                    <label className="label py-0.5">
+                <label className="label py-0.5">
+                    {error ? (
                         <span className="label-text-alt text-error">{error}</span>
-                    </label>
-                )}
+                    ) : (
+                        helperText && <span className="label-text-alt opacity-60">{helperText}</span>
+                    )}
+                </label>
             </div>
         );
     }

@@ -1,9 +1,9 @@
 import { useEffect, useState, useMemo, useRef } from "react";
-import { useForm } from "react-hook-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useForm, Controller } from "react-hook-form";
+import { useQueryClient } from "@tanstack/react-query";
 import { 
-    Box, FileImage, ShoppingCart, Trash2, 
-    AlertTriangle, Calculator, QrCode, DollarSign, Percent, 
+    Box, ShoppingCart, Trash2, 
+    Calculator, QrCode, DollarSign, Percent, 
     Users
 } from "lucide-react"; 
 
@@ -27,14 +27,13 @@ import { TravesiaBadge } from "../../../components/ui/TravesiaBadge";
 import { TravesiaSingleImageUploader } from "../../../components/ui/TravesiaSingleImageUploader"; // Uploader
 
 // Types
-import { CreatePackageRequest, Package } from "../types";
-import { Product } from "../../inventory/types";
+import type { CreatePackageRequest, Package, PackageDetailResponse } from "../types";
+import type { Product } from "../../inventory/types";
 import { TravesiaFinancialInput } from "../../../components/ui/TravesiaFinancialInput";
 import { 
     getPackageDetails, addPackageDetail, 
     updatePackageDetail, deletePackageDetail 
 } from "../services/packageService";
-import { PackageDetailResponse } from "../types";
 
 interface Props {
     isOpen: boolean;
@@ -73,6 +72,7 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
     // Formulario
     const { 
         register, 
+        control,
         handleSubmit, 
         setValue, 
         watch, 
@@ -93,7 +93,6 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
     const watchedPeopleCount = watch("peopleCount");
     const watchedTotalPrice = watch("totalPrice");
     const watchedCommissionType = watch("commissionType");
-    const watchedCommissionValue = watch("commissionValue");
 
     // --- CÁLCULOS ---
     const calculatedMinPrice = useMemo(() => {
@@ -460,7 +459,7 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
                                 <TravesiaSingleImageUploader value={coverImage} onChange={setCoverImage} />
                             </div>
                             <div className="bg-base-200/30 p-4 rounded-xl border border-base-200">
-                                <span className="text-xs font-bold uppercase opacity-60 mb-2 block flex items-center gap-1">
+                                <span className="text-xs font-bold uppercase opacity-60 mb-2 items-center gap-1">
                                     <QrCode size={14}/> Código QR (Cobros)
                                 </span>
                                 <TravesiaSingleImageUploader value={qrImage} onChange={setQrImage} />
@@ -644,25 +643,39 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
                             <h4 className="font-bold text-sm flex items-center gap-2"><DollarSign size={16}/> Precios del Paquete</h4>
                             
                     {/* ✅ USO DEL COMPONENTE REUTILIZABLE: PRECIO TOTAL */}
-                                <TravesiaFinancialInput
-                                    label="Precio Total Venta"
-                                    type="number"
-                                    step="0.01"
-                                    placeholder="0.00"
-                                    disabled={selectedItems.length > 1}
-                                    // Pasamos clases específicas para estilo financiero grande
-                                    className={`font-mono text-lg font-bold ${Number(watchedTotalPrice) < calculatedMinPrice ? 'text-error' : 'text-success'}`}
-                                    // El badge condicional se pasa como prop
-                                    badge={selectedItems.length > 1 && (
-                                        <span className="badge badge-ghost badge-xs">Auto-calculado</span>
-                                    )}
-                                    // React Hook Form props
-                                    {...register("totalPrice", { 
-                                        required: "Requerido", 
-                                        min: { value: calculatedMinPrice, message: `Mínimo Bs. ${calculatedMinPrice}` } 
-                                    })}
-                                    error={errors.totalPrice?.message}
-                                />
+                            <Controller
+                                control={control}
+                                name="totalPrice"
+                                rules={{ 
+                                    required: "Requerido", 
+                                    min: { value: calculatedMinPrice, message: `Mínimo Bs. ${calculatedMinPrice}` } 
+                                }}
+                                render={({ field: { onChange, value, ref } }) => (
+                                    <TravesiaFinancialInput
+                                        ref={ref}
+                                        label="Precio Total Venta"
+                                        type="number"
+                                        step="0.01"
+                                        placeholder="0.00"
+                                        disabled={selectedItems.length > 1}
+                                        // Pasamos clases específicas para estilo financiero grande
+                                        className={`font-mono text-lg font-bold ${Number(watchedTotalPrice) < calculatedMinPrice ? 'text-error' : 'text-success'}`}
+                                        value={value} 
+                                        onValueChange={onChange}
+                                        // El badge condicional se pasa como prop
+                                        badge={selectedItems.length > 1 && (
+                                            <span className="badge badge-ghost badge-xs">Auto-calculado</span>
+                                        )}
+                                        // React Hook Form props
+                                        // {...register("totalPrice", { 
+                                        //     required: "Requerido", 
+                                        //     min: { value: calculatedMinPrice, message: `Mínimo Bs. ${calculatedMinPrice}` } 
+                                        // })}
+                                        error={errors.totalPrice?.message}
+                                    />
+                                )}
+                            />
+                                
                             <div className="flex justify-between items-center bg-base-200 p-3 rounded-lg">
                                 <span className="text-xs">Precio por Persona:</span>
                                 <span className="font-mono font-bold text-primary">Bs. {watch("pricePerPerson")?.toFixed(2)}</span>
@@ -686,18 +699,28 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
                                 isLoading={loadingCommissions}
                             />
                             <input type="hidden" {...register("commissionType", { required: true })} />
-                            <TravesiaFinancialInput
-                                label="Valor de la Comisión"
-                                type="number"
-                                step="0.01"
-                                placeholder="0.00"
-                                // El botón derecho es simplemente un string que pasamos como suffix
-                                suffix={watchedCommissionType === COMMISSION_CODES.PERCENTAGE ? "%" : "Bs"}
-                                // El texto de ayuda inferior
-                                helperText={getCommissionHint()}
-                                // React Hook Form
-                                {...register("commissionValue", { required: "Requerido", min: 1 })}
-                                error={errors.commissionValue?.message}
+                            <Controller
+                                    control={control}
+                                    name="commissionValue"
+                                    rules={{ required: "Requerido", min: 1 }}
+                                    render={({ field: { onChange, value, ref } }) => (
+                                    <TravesiaFinancialInput
+                                        ref={ref}
+                                        label="Valor de la Comisión"
+                                        type="number"
+                                        step="0.01"
+                                        placeholder="0.00"
+                                        // El botón derecho es simplemente un string que pasamos como suffix
+                                        suffix={watchedCommissionType === COMMISSION_CODES.PERCENTAGE ? "%" : "Bs"}
+                                        // El texto de ayuda inferior
+                                        helperText={getCommissionHint()}
+                                        value={value}
+                                        onValueChange={onChange}
+                                        // React Hook Form
+                                        // {...register("commissionValue", { required: "Requerido", min: 1 })}
+                                        error={errors.commissionValue?.message}
+                                    />
+                                )}
                             />
                         </div>
                     </div>

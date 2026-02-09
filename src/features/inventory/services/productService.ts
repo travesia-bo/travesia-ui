@@ -1,5 +1,5 @@
 import api from '../../../lib/axios';
-import { Product, ProductStatusUpdate, type CreateProductRequest } from '../types';
+import type { Product, ProductStatusUpdate, CreateProductRequest } from '../types';
 import { useQuery } from '@tanstack/react-query';
 import { getLocations } from '../services/locationService';
 

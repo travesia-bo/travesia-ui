@@ -58,7 +58,7 @@ export const PaymentRegistrationModal = ({ isOpen, onClose }: Props) => {
     });
 
     // Formulario
-    const { control, trigger, getValues, watch, formState: { errors: formErrors, submitCount } } = useForm({
+    const { control, trigger, getValues, watch, formState: {  submitCount } } = useForm({
         resolver: zodResolver(paymentHeaderSchema),
         defaultValues: { totalAmount: 0, paymentMethodType: 0, bankReference: "" },
         mode: "onChange"

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Bed, Bus, Ticket, Layers, Briefcase } from "lucide-react";
-import { SellerPackage } from "../types";
+import type { SellerPackage } from "../types";
 
 interface Props {
     packages: SellerPackage[];

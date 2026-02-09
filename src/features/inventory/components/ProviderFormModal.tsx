@@ -3,7 +3,6 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query"; 
-import { toast } from "sonner"; 
 
 // Hooks y Contextos
 import { useCities } from "../../../hooks/useCities";
@@ -13,7 +12,7 @@ import { useToast } from "../../../context/ToastContext";
 
 // Servicios y Tipos
 import { createProvider, updateProvider } from "../services/providerService"; 
-import { Provider } from "../types";
+import { type Provider } from "../types/index";
 
 // UI Components
 import { TravesiaModal } from "../../../components/ui/TravesiaModal";
@@ -32,7 +31,7 @@ const providerSchema = z.object({
     contactPaternalSurname: z.string().max(45).optional(),
     contactMaternalSurname: z.string().max(45).optional(),
     contactIdentityCard: z.string().max(45).optional(),
-    contactPhoneNumber: z.coerce.number({ invalid_type_error: "Debe ser un número" }).min(60000000, "Número inválido (mín 8 dígitos)"), 
+    contactPhoneNumber: z.coerce.number().min(60000000, "Número inválido (mín 8 dígitos)"),
     contactEmail: z.string().email("Correo inválido").optional().or(z.literal("")), 
     imageUrl: z.string().optional(),
 
@@ -42,8 +41,6 @@ const providerSchema = z.object({
     cityId: z.coerce.string().min(1, "Debe seleccionar una ciudad"), 
     statusType: z.coerce.string().min(1, "Debe seleccionar un estado"),
 });
-
-type ProviderFormData = z.infer<typeof providerSchema>;
 
 interface Props {
     isOpen: boolean;
@@ -64,12 +61,19 @@ export const ProviderFormModal = ({ isOpen, onClose, providerToEdit }: Props) =>
     const [manualShake, setManualShake] = useState(0);
 
     // Formulario
-    const { register, handleSubmit, reset, trigger, formState: { errors, submitCount } } = useForm<ProviderFormData>({
+    const { register, handleSubmit, reset, trigger, formState: { errors, submitCount } } = useForm({
         resolver: zodResolver(providerSchema),
         defaultValues: {
-            contactFirstName: "", contactPaternalSurname: "", contactMaternalSurname: "", 
-            contactPhoneNumber: undefined, contactEmail: "", 
-            name: "", address: "", cityId: "", statusType: ""
+            contactFirstName: "", 
+            contactPaternalSurname: "", 
+            contactMaternalSurname: "", 
+            contactIdentityCard: "",
+            contactPhoneNumber: undefined, 
+            contactEmail: "", 
+            name: "", 
+            address: "", 
+            cityId: "", 
+            statusType: ""
         }
     });
 
@@ -86,11 +90,12 @@ export const ProviderFormModal = ({ isOpen, onClose, providerToEdit }: Props) =>
                     contactPaternalSurname: providerToEdit.contactPaternalSurname || "", 
                     contactMaternalSurname: providerToEdit.contactMaternalSurname || "", 
                     contactIdentityCard: providerToEdit.contactIdentityCard || "", 
+
                     contactPhoneNumber: providerToEdit.contactPhoneNumber,
                     contactEmail: providerToEdit.contactEmail || "",
                     
                     name: providerToEdit.name,
-                    address: providerToEdit.address,
+                    address: providerToEdit.address || "",
                     
                     cityId: providerToEdit.cityId.toString(), 
                     statusType: providerToEdit.statusCode.toString(), 
@@ -142,7 +147,7 @@ export const ProviderFormModal = ({ isOpen, onClose, providerToEdit }: Props) =>
         }
     });
 
-    const onSubmit = async (data: ProviderFormData) => {
+    const onSubmit = async (data: any) => { 
         const payload = {
             ...data,
             cityId: Number(data.cityId),

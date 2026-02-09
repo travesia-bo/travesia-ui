@@ -1,6 +1,6 @@
 import type { Package } from "../types";
 import { TravesiaModal } from "../../../components/ui/TravesiaModal";
-import { Package as BoxIcon, MapPin, Tag } from "lucide-react";
+import { Package as BoxIcon, MapPin } from "lucide-react";
 import { TravesiaBadge } from "../../../components/ui/TravesiaBadge";
 
 interface Props {

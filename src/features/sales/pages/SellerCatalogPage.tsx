@@ -2,8 +2,8 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { 
     Eye, ShoppingCart, Users, Package as BoxIcon, 
-    TrendingUp, AlertCircle, CheckCircle2, 
-    ImageIcon, QrCode, Boxes, MapPin
+    TrendingUp,
+    ImageIcon, QrCode, Boxes,
 } from "lucide-react";
 
 // Servicios y Tipos
@@ -15,13 +15,11 @@ import { TravesiaTable, type Column } from "../../../components/ui/TravesiaTable
 import { TravesiaInput } from "../../../components/ui/TravesiaInput";
 import { CatalogFilters } from "../components/CatalogFilters";
 import { TravesiaButton } from "../../../components/ui/TravesiaButton";
-import { useToast } from "../../../context/ToastContext";
 import { PackageDetailsModal } from "../../commercial/components/PackageDetailsModal";
 import { TravesiaImageViewer } from "../../../components/ui/TravesiaImageViewer";
 import { ReservationFormModal } from "../components/ReservationFormModal";
 
 export const SellerCatalogPage = () => {
-    const { success } = useToast();
     
     // 1. Data Fetching
     const { data: packages = [], isLoading } = useQuery({

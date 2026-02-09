@@ -1,5 +1,5 @@
 import api from '../../../lib/axios';
-import { Provider } from '../types';
+import type { Provider } from '../types/index';
 // import { ApiResponse } from '../../../types/api'; // Asegúrate de tener este tipo o bórralo si no lo usas
 
 // 1. OBTENER LISTA (GET) - Esta es la que te faltaba
