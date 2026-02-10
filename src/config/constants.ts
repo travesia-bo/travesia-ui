@@ -43,3 +43,10 @@ export const RESERVATION_STATUS_ID = {
     EXPIRED: 104,
     COMPLETED: 105
 } as const;
+
+export const TRANSACTION_STATUS_ID = {
+    PENDING: 501,
+    CONFIRMED: 502,
+    REFUSED: 503,
+    RETURN: 504
+} as const;

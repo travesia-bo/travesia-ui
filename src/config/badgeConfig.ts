@@ -29,10 +29,10 @@ export const BADGE_STYLES: Record<BadgeType, Record<string | number, string>> = 
 
     // 3. TRANSACCIONES (Ejemplo futuro)
     TRANSACTION_STATUS: {
-        PENDING: "badge-warning text-white",
-        COMPLETED: "badge-success text-white",
-        FAILED: "badge-error text-white",
-        default: "badge-neutral text-neutral-content"
+        501: "badge-warning text-white",      // Pendiente
+        502: "badge-success text-white",      // Confirmado
+        503: "badge-error text-white",        // Rechazado
+        504: "badge-info text-white",         // Devolución
     },
     
     RESERVATION_STATUS: {
