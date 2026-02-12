@@ -1,26 +1,39 @@
-// src/features/finance/pages/IncomePage.tsx
+import { useState } from "react";
+
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Wallet, ExternalLink, ImageOff } from "lucide-react";
+import { Wallet } from "lucide-react";
+// import { ExternalLink, ImageOff } from "lucide-react";
 
 // Componentes Reutilizables
 import { TravesiaTable, type Column } from "../../../components/ui/TravesiaTable";
 import { TravesiaBadge } from "../../../components/ui/TravesiaBadge";
-import { BtnExcel } from "../../../components/ui/CrudButtons";
+import { BtnExcel, CrudButtons } from "../../../components/ui/CrudButtons";
 
 // Configuración y Servicios
 import { getTransactions } from "../services/transactionService";
 import { getBadgeStyle } from "../../../config/badgeConfig";
 import type { TransactionResponse } from "../types";
 
+import { TransactionFormModal } from "../components/TransactionFormModal";
+
+
 export const IncomePage = () => {
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [transactionToEdit, setTransactionToEdit] = useState<TransactionResponse | null>(null);
     
     const { data: transactions = [], isLoading } = useQuery({
         queryKey: ['finance', 'income'],
         queryFn: getTransactions,
         staleTime: 1000 * 60 * 5, // 5 min cache
     });
+    
+    // ✅ Handler para abrir edición
+    const handleEdit = (transaction: TransactionResponse) => {
+        setTransactionToEdit(transaction);
+        setIsEditModalOpen(true);
+    };
 
     // Definición de Columnas para TravesiaTable
     const columns: Column<TransactionResponse>[] = [
@@ -61,23 +74,23 @@ export const IncomePage = () => {
                 </TravesiaBadge>
             )
         },
-        { 
-            header: "Comprobante", 
-            render: (row) => row.proofUrl ? (
-                <a 
-                    href={row.proofUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="btn btn-xs btn-ghost gap-1 text-primary"
-                >
-                    <ExternalLink size={14} /> Ver
-                </a>
-            ) : (
-                <span className="opacity-30 flex items-center gap-1 text-xs">
-                    <ImageOff size={14} /> Sin img
-                </span>
-            )
-        },
+        // { 
+        //     header: "Comprobante", 
+        //     render: (row) => row.proofUrl ? (
+        //         <a 
+        //             href={row.proofUrl} 
+        //             target="_blank" 
+        //             rel="noopener noreferrer" 
+        //             className="btn btn-xs btn-ghost gap-1 text-primary"
+        //         >
+        //             <ExternalLink size={14} /> Ver
+        //         </a>
+        //     ) : (
+        //         <span className="opacity-30 flex items-center gap-1 text-xs">
+        //             <ImageOff size={14} /> Sin img
+        //         </span>
+        //     )
+        // },
         { 
             header: "Monto", 
             className: "text-right",
@@ -85,6 +98,16 @@ export const IncomePage = () => {
                 <span className="font-bold text-base font-mono">
                     {new Intl.NumberFormat('es-BO', { style: 'currency', currency: 'BOB' }).format(row.amount)}
                 </span>
+            )
+        },
+        {
+            header: "Acciones",
+            className: "text-right w-32",
+            render: (row) => (
+                <CrudButtons 
+                    onEdit={() => handleEdit(row)}
+                    onDelete={() => console.log("Lógica pendiente para borrar ID:", row.id)} 
+                />
             )
         }
     ];
@@ -113,6 +136,14 @@ export const IncomePage = () => {
                 // Ejemplo de uso de rowClassName si quisieras resaltar filas pendientes
                 rowClassName={(row) => row.statusCode === 501 ? "bg-warning/5" : ""}
             />
+            {/* ✅ Modal de Edición */}
+            {isEditModalOpen && (
+                <TransactionFormModal 
+                    isOpen={isEditModalOpen}
+                    onClose={() => { setIsEditModalOpen(false); setTransactionToEdit(null); }}
+                    transactionToEdit={transactionToEdit}
+                />
+            )}
         </div>
     );
 };
