@@ -23,9 +23,13 @@ export interface Package {
     totalPrice: number;     
     pricePerPerson: number;
     minPrice: number;       
+    
+    grossMargin: number;       
+    estimatedCommission: number;       
+    netMargin: number;       
 
-    commissionTypeCode: number; 
     commissionTypeName: string;
+    commissionTypeCode: number; 
     commissionValue: number;
     
     isPriceNegotiable: boolean;

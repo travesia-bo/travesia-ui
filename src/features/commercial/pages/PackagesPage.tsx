@@ -13,10 +13,11 @@ import { TravesiaInput } from '../../../components/ui/TravesiaInput';
 import { TravesiaSelect } from '../../../components/ui/TravesiaSelect';
 import { CrudButtons, BtnCreate } from '../../../components/ui/CrudButtons';
 import { TravesiaSwitch } from '../../../components/ui/TravesiaSwitch';
-import { PackageDetailsModal } from '../components/PackageDetailsModal'; // Modal de SOLO LECTURA
-import { PackageFormModal } from '../components/PackageFormModal';       // ✅ NUEVO: Modal de CREAR/EDITAR
+import { PackageDetailsModal } from '../components/PackageDetailsModal'; 
+import { PackageFinanceModal } from '../components/PackageFinanceModal';
+import { PackageFormModal } from '../components/PackageFormModal';     
 import { ConfirmationModal } from '../../../components/ui/ConfirmationModal';
-import { Eye, Users, Package as BoxIcon, Globe, Boxes } from 'lucide-react';
+import { Eye, Users, Package as BoxIcon, Globe, Boxes, Calculator } from 'lucide-react';
 import { useToast } from '../../../context/ToastContext';
 import { PERMISSIONS } from '../../../config/permissions';
 
@@ -62,6 +63,10 @@ export const PackagesPage = () => {
     const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);      
     const [isVisibilityModalOpen, setIsVisibilityModalOpen] = useState(false); 
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);      
+
+    // ✅ D. Modal Financiero
+    const [financeModalOpen, setFinanceModalOpen] = useState(false);
+    const [selectedPackageForFinance, setSelectedPackageForFinance] = useState<Package | null>(null);
 
     // --- MUTATIONS ---
     const statusMutation = useMutation({
@@ -243,6 +248,15 @@ export const PackagesPage = () => {
                         <Eye size={18} />
                     </button>
 
+                    {/* ✅ NUEVO: Botón Detalles Financieros (Calculadora) */}
+                    <button 
+                        className="btn btn-square btn-sm btn-ghost text-success hover:bg-success/10"
+                        onClick={() => { setSelectedPackageForFinance(row); setFinanceModalOpen(true); }}
+                        title="Ver proyección financiera"
+                    >
+                        <Calculator size={18} />
+                    </button>
+
                     <CrudButtons 
                         onEdit={() => handleEdit(row)} // ✅ CONECTADO
                         onDelete={() => handleDeleteClick(row)} 
@@ -362,6 +376,13 @@ export const PackagesPage = () => {
                 confirmText="Sí, Eliminar"
                 variant="danger"
                 isLoading={deleteMutation.isPending}
+            />
+
+            {/* ✅ NUEVO: MODAL FINANCIERO */}
+            <PackageFinanceModal
+                isOpen={financeModalOpen}
+                onClose={() => setFinanceModalOpen(false)}
+                pkg={selectedPackageForFinance}
             />
         </div>
     );
