@@ -31,18 +31,21 @@ export const TravesiaDateTimePicker = ({
     maxDate,
     isBirthDate = false,
 }: Props) => {
-    return (
-        <div className="form-control w-full">
-            <label className="label">
-                <span className="label-text font-bold text-base-content/70">{label}</span>
-            </label>
+return (
+        <Controller
+            control={control}
+            name={name}
+            render={({ field: { onChange, value }, fieldState: { error } }) => (
+                <div className="form-control w-full">
+                    
+                    {/* ✅ 1. LABEL ADENTRO: Ahora se pinta de rojo si hay error */}
+                    <label className="label">
+                        <span className={`label-text font-bold ${error ? "text-error" : "text-base-content/70"}`}>
+                            {label}
+                        </span>
+                    </label>
 
-            <Controller
-                control={control}
-                name={name}
-                render={({ field: { onChange, value }, fieldState: { error } }) => (
                     <div className="relative group">
-                        {/* Icono Izquierda */}
                         <div className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/50 z-10 pointer-events-none">
                             <Calendar size={18} />
                         </div>
@@ -52,8 +55,6 @@ export const TravesiaDateTimePicker = ({
                             onChange={(date: Date | null) => {
                                 if (date) {
                                     const dateToSave = new Date(date);
-                                    // Si NO es cumpleaños, guardamos fin del día (vencimientos)
-                                    // Si ES cumpleaños, guardamos la fecha tal cual (00:00:00)
                                     if (!isBirthDate) {
                                         dateToSave.setHours(23, 59, 59, 999);
                                     }
@@ -62,35 +63,26 @@ export const TravesiaDateTimePicker = ({
                                     onChange(null);
                                 }
                             }}
-                            // --- Configuración Visual ---
                             showTimeSelect={false}
                             dateFormat="dd 'de' MMMM, yyyy"
                             locale="es"
                             placeholderText={placeholder}
                             disabled={disabled}
-                            
-                            // --- Límites y Navegación ---
                             minDate={minDate} 
                             maxDate={maxDate}
-                            
-                            // ✅ NAVEGACIÓN ENTRE AÑOS (SOLUCIÓN)
                             showMonthDropdown
                             showYearDropdown
-                            dropdownMode="select" // Muestra <select> nativo (Ideal para ir a 1990 rápido)
-                            yearDropdownItemNumber={100} // Rango de 100 años
-                            scrollableYearDropdown={false} // False para usar el select nativo
-                            
-                            // ✅ SOLUCIÓN AL CORTE (PORTAL)
-                            // Renderiza el calendario en el <body> directamente
+                            dropdownMode="select" 
+                            yearDropdownItemNumber={100} 
+                            scrollableYearDropdown={false} 
                             portalId="root"
                             popperProps={{ strategy: "fixed" }}
-                            popperClassName="!z-[99999]" // Z-Index superior al modal
-                            
-                            // --- Estilos ---
+                            popperClassName="!z-[99999]" 
+                            // ✅ 2. Borde rojo forzado si hay error
                             className={`
                                 input input-bordered w-full pl-10 pr-10 text-sm font-medium
                                 focus:outline-none focus:border-primary transition-all
-                                ${error ? "input-error" : ""}
+                                ${error ? "input-error border-error" : ""} 
                                 ${disabled ? "bg-base-200 cursor-not-allowed" : "bg-base-100"}
                             `}
                             wrapperClassName="w-full"
@@ -98,7 +90,6 @@ export const TravesiaDateTimePicker = ({
                             dayClassName={() => "hover:!bg-primary hover:!text-primary-content rounded-full"}
                         />
 
-                        {/* Botón Limpiar */}
                         {value && !disabled && (
                             <button
                                 type="button"
@@ -109,14 +100,17 @@ export const TravesiaDateTimePicker = ({
                             </button>
                         )}
                     </div>
-                )}
-            />
 
-            {helperText && (
-                <label className="label pb-0">
-                    <span className="label-text-alt text-base-content/60">{helperText}</span>
-                </label>
+                    {/* ✅ 3. MENSAJE ERROR: Prioridad al error sobre el helperText */}
+                    {(error || helperText) && (
+                        <label className="label pb-0">
+                            <span className={`label-text-alt ${error ? "text-error font-bold" : "text-base-content/60"}`}>
+                                {error ? error.message : helperText}
+                            </span>
+                        </label>
+                    )}
+                </div>
             )}
-        </div>
+        />
     );
 };

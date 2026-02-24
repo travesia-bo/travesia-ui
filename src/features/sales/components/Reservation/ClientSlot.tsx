@@ -63,6 +63,10 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
             setValue(`clients.${index}.newClientData`, null);
         } else {
             setValue(`clients.${index}.clientId`, null);
+
+            setValue(`clients.${index}.newClientData.clientType`, 701); 
+            setValue(`clients.${index}.newClientData.cityId`, 1); 
+
             setValue(`clients.${index}.newClientData.clientType`, undefined);
             setValue(`clients.${index}.newClientData.genderType`, undefined);
         }
@@ -74,6 +78,10 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
         return <span className="opacity-50 italic">Sin datos registrados</span>;
     };
 
+    // Calcula la fecha de hace exactamente 18 años
+    const eighteenYearsAgo = new Date();
+    eighteenYearsAgo.setFullYear(eighteenYearsAgo.getFullYear() - 18);
+
     return (
         <div className={`border rounded-xl transition-all duration-300 ${isExpanded ? 'border-primary shadow-md bg-base-100' : 'border-base-200 bg-base-50'}`}>
             {/* Header */}
@@ -83,7 +91,7 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
                         {index + 1}
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-xs font-bold uppercase tracking-wider opacity-60">Pasajero {index + 1}</span>
+                        <span className="text-xs font-bold uppercase tracking-wider opacity-60">Cliente {index + 1}</span>
                         <div className="text-sm">{getSlotTitle()}</div>
                     </div>
                 </div>
@@ -182,12 +190,13 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
                                     {...register(`clients.${index}.newClientData.identityCard`)}
                                     error={currentErrors.identityCard?.message}
                                 />
-                                <TravesiaDateTimePicker
-                                    label="Fecha Nac."
+                                <TravesiaDateTimePicker 
+                                    label="Fecha Nac." 
                                     name={`clients.${index}.newClientData.birthDate`}
-                                    control={control}
+                                    control={control} 
                                     isBirthDate={true}
-                                    maxDate={new Date()}
+                                    // ✅ CAMBIO: El calendario bloqueará fechas recientes
+                                    maxDate={eighteenYearsAgo} 
                                     helperText={currentErrors.birthDate?.message}
                                 />
                             </div>
@@ -216,7 +225,6 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
                                 <TravesiaSelect
                                     label="Tipo de Cliente"
                                     options={[
-                                        { value: "", label: "Selecciona" },
                                         ...(clientTypeOptions || []).map((p: any) => ({
                                             value: p.numericCode ?? p.id, 
                                             label: p.name

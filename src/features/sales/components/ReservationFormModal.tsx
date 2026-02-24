@@ -32,17 +32,30 @@ const clientSchema = z.object({
     clientId: z.number().nullable().optional(),
     newClientData: z.object({
         firstName: z.string().min(2, "Mínimo 2 letras"),
-        paternalSurname: z.string().min(2, "Requerido"),
+        paternalSurname: z.string().optional().nullable(),
         maternalSurname: z.string().optional().nullable(),
-        phoneNumber: z.coerce.number().min(60000000, "Celular inválido"),
+        phoneNumber: z.any().transform(Number).refine((n) => !isNaN(n) && n > 0, "Celular inválido"),
         email: z.string().email().optional().nullable().or(z.literal("")),
         identityCard: z.string().min(4, "CI requerido"),
-        cityId: z.coerce.number().min(1, "Ciudad requerida"),
-        birthDate: z.string().optional().nullable(),
+        cityId: z.any().transform(Number).refine((n) => !isNaN(n) && n > 0, "Ciudad requerida"),
+        // ✅ CORRECCIÓN: Quitamos { required_error: ... } y dejamos solo el .min()
+        birthDate: z.any()
+            .refine((val) => val !== null && val !== undefined && val !== "", "Fecha requerida")
+            .refine((val) => {
+                if (!val) return false; // Por seguridad
+                const today = new Date();
+                const dob = new Date(val);
+                let age = today.getFullYear() - dob.getFullYear();
+                const monthDiff = today.getMonth() - dob.getMonth();
+                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+                    age--;
+                }
+                return age >= 18;
+            }, "Debe ser mayor de 18 años"),
         // ✅ Asegurar que estos sean tratados como números en el esquema
-        clientType: z.coerce.number().min(1, "Tipo de cliente es requerido"),
-        genderType: z.coerce.number().min(1, "Género es requerido"),
-        careerId: z.coerce.number().min(1, "Carrera es requerida"),
+        clientType: z.any().transform(Number).refine((n) => !isNaN(n) && n > 0, "Tipo de cliente es requerido"),
+        genderType: z.any().transform(Number).refine((n) => !isNaN(n) && n > 0, "Género es requerido"),
+        careerId: z.any().transform(Number).refine((n) => !isNaN(n) && n > 0, "Carrera es requerida"),
     }).nullable().optional()
 }).superRefine((data, ctx) => {
     // Validación Senior: O tiene ID, o tiene Datos Nuevos. No ambos nulos.
