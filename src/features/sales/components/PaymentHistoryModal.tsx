@@ -1,9 +1,8 @@
 // src/features/sales/components/PaymentHistoryModal.tsx
 import { TravesiaModal } from "../../../components/ui/TravesiaModal";
-import { type ClientFinancialReportResponse, type ReservationResponse } from "../types";
+import { type ClientFinancialReportResponse } from "../types";
 import { CreditCard, Calendar } from "lucide-react";
 import { TravesiaBadge } from "../../../components/ui/TravesiaBadge";
-import { RESERVATION_STATUS_ID } from "../../../config/constants";
 
 interface Props {
     report: ClientFinancialReportResponse | null;
@@ -11,18 +10,6 @@ interface Props {
 }
 
 export const PaymentHistoryModal = ({ report, onClose }: Props) => {
-    // 5. LÓGICA DE COLORES POR FILA (Basado en statusCode)
-    const getRowClassName = (row: ReservationResponse) => {
-        const code = row.statusCode;switch (code) {
-        case RESERVATION_STATUS_ID.PENDING: return '!bg-warning/10 border-l-4 border-l-warning'; 
-        case RESERVATION_STATUS_ID.CONFIRMED: return '!bg-success/10 border-l-4 border-l-success';
-        case RESERVATION_STATUS_ID.CANCELLED: return '!bg-error/10 border-l-4 border-l-error opacity-70';
-        case RESERVATION_STATUS_ID.EXPIRED: return '!bg-orange-500/10 border-l-4 border-l-orange-500'; // Expirado
-        case RESERVATION_STATUS_ID.COMPLETED: return '!bg-info/10 border-l-4 border-l-info';           // Completado
-        default: return '';
-        }
-    };
-
     if (!report) return null;
 
     return (
