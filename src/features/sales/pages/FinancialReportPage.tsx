@@ -10,13 +10,13 @@ import type { ClientFinancialReportResponse } from '../types';
 // UI Components
 import { TravesiaTable, type Column } from '../../../components/ui/TravesiaTable';
 import { TravesiaInput } from '../../../components/ui/TravesiaInput';
-import { BtnCreate, CrudButtons } from '../../../components/ui/CrudButtons';
+import { BtnCreate } from '../../../components/ui/CrudButtons';
 import { PaymentHistoryModal } from '../components/PaymentHistoryModal';
-import { useToast } from '../../../context/ToastContext';
+// import { useToast } from '../../../context/ToastContext';
 import { PaymentRegistrationModal } from '../components/PaymentRegistrationModal';
 
 export const FinancialReportPage = () => {
-    const { success, error: toastError } = useToast();
+    // const { success, error: toastError } = useToast();
     
     // 1. Data Fetching
     const { data: reports = [], isLoading } = useQuery({
@@ -43,15 +43,15 @@ export const FinancialReportPage = () => {
     const handleCreatePayment = () => {
         setIsCreateModalOpen(true); 
     };
-    const handleEdit = (row: ClientFinancialReportResponse) => {
-        // TODO: Lógica de edición
-        success(`Editar pagos de ${row.clientFullName}`);
-    };
+    // const handleEdit = (row: ClientFinancialReportResponse) => {
+    //     // TODO: Lógica de edición
+    //     success(`Editar pagos de ${row.clientFullName}`);
+    // };
 
-    const handleDelete = (_row: ClientFinancialReportResponse) => {
-        // TODO: Lógica de borrado (quizás borrar el último pago?)
-        toastError("Función de eliminar no implementada aún");
-    };
+    // const handleDelete = (_row: ClientFinancialReportResponse) => {
+    //     // TODO: Lógica de borrado (quizás borrar el último pago?)
+    //     toastError("Función de eliminar no implementada aún");
+    // };
 
     // 5. Columnas
     const columns: Column<ClientFinancialReportResponse>[] = [
@@ -99,7 +99,7 @@ export const FinancialReportPage = () => {
         {
             header: 'Saldo',
             render: (row) => (
-                <div className="font-mono text-right font-bold">
+                <div className="font-mono text-left font-bold">
                     {row.balance > 0 ? (
                         <span className="text-error">Bs. {row.balance.toFixed(2)}</span>
                     ) : (
@@ -109,7 +109,7 @@ export const FinancialReportPage = () => {
             )
         },
         {
-            header: 'Acciones',
+            header: '',
             className: 'text-right',
             render: (row) => (
                 <div className="flex justify-end gap-2">
@@ -123,12 +123,12 @@ export const FinancialReportPage = () => {
                     </button>
 
                     {/* Botones CRUD Standard (Editar / Borrar) */}
-                    <CrudButtons 
+                    {/* <CrudButtons 
                         onEdit={() => handleEdit(row)}
                         onDelete={() => handleDelete(row)}
                         // Ocultamos delete si no hay pagos para borrar, por ejemplo
                         // disabledDelete={row.paymentHistory.length === 0}
-                    />
+                    /> */}
                 </div>
             )
         }

@@ -1,8 +1,9 @@
 // src/features/sales/components/PaymentHistoryModal.tsx
 import { TravesiaModal } from "../../../components/ui/TravesiaModal";
-import { type ClientFinancialReportResponse } from "../types";
+import { type ClientFinancialReportResponse, type ReservationResponse } from "../types";
 import { CreditCard, Calendar } from "lucide-react";
 import { TravesiaBadge } from "../../../components/ui/TravesiaBadge";
+import { RESERVATION_STATUS_ID } from "../../../config/constants";
 
 interface Props {
     report: ClientFinancialReportResponse | null;
@@ -10,6 +11,18 @@ interface Props {
 }
 
 export const PaymentHistoryModal = ({ report, onClose }: Props) => {
+    // 5. LÓGICA DE COLORES POR FILA (Basado en statusCode)
+    const getRowClassName = (row: ReservationResponse) => {
+        const code = row.statusCode;switch (code) {
+        case RESERVATION_STATUS_ID.PENDING: return '!bg-warning/10 border-l-4 border-l-warning'; 
+        case RESERVATION_STATUS_ID.CONFIRMED: return '!bg-success/10 border-l-4 border-l-success';
+        case RESERVATION_STATUS_ID.CANCELLED: return '!bg-error/10 border-l-4 border-l-error opacity-70';
+        case RESERVATION_STATUS_ID.EXPIRED: return '!bg-orange-500/10 border-l-4 border-l-orange-500'; // Expirado
+        case RESERVATION_STATUS_ID.COMPLETED: return '!bg-info/10 border-l-4 border-l-info';           // Completado
+        default: return '';
+        }
+    };
+
     if (!report) return null;
 
     return (
@@ -58,6 +71,7 @@ export const PaymentHistoryModal = ({ report, onClose }: Props) => {
                             <tr>
                                 <th>Fecha</th>
                                 <th>Método</th>
+                                <th>Estado Pago</th>
                                 <th>Referencia</th>
                                 <th className="text-right">Monto</th>
                             </tr>
@@ -82,9 +96,18 @@ export const PaymentHistoryModal = ({ report, onClose }: Props) => {
                                         <td>
                                             {/* Usamos tu componente Badge para mapear el código 401, 402, etc. */}
                                             <TravesiaBadge 
-                                                code={payment.paymentMethodType} 
-                                                label={payment.paymentMethodType.toString()} // Fallback label, idealmente tendrías un map
-                                                type="DEFAULT" // O crea un tipo PAYMENT_METHOD en badgeConfig
+                                                code={payment.paymentMethodCode} 
+                                                label={payment.paymentMethodName.toString()} // Fallback label, idealmente tendrías un map
+                                                type="PAYMENT_METHOD" // O crea un tipo PAYMENT_METHOD en badgeConfig
+                                                className="scale-90 origin-left"
+                                            />
+                                        </td>
+                                        <td>
+                                            {/* Usamos tu componente Badge para mapear el código 401, 402, etc. */}
+                                            <TravesiaBadge 
+                                                code={payment.paymentStatusCode} 
+                                                label={payment.paymentStatusName.toString()} // Fallback label, idealmente tendrías un map
+                                                type="TRANSACTION_STATUS" // O crea un tipo PAYMENT_METHOD en badgeConfig
                                                 className="scale-90 origin-left"
                                             />
                                         </td>

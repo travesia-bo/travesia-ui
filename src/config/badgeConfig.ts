@@ -4,6 +4,7 @@ export type BadgeType =
     | 'PROVIDER_STATUS' 
     | 'RESERVATION_STATUS' 
     | 'TRANSACTION_STATUS' 
+    | 'PAYMENT_METHOD'
     | 'DEFAULT';
 
 // Definimos el mapa de colores. 
@@ -41,6 +42,14 @@ export const BADGE_STYLES: Record<BadgeType, Record<string | number, string>> = 
         103: "badge-error text-white",        // Cancelada (Rojo)
         104: "border-orange-500 bg-orange-50 text-orange-600", // Expirada (Naranja custom)
         105: "badge-info text-white",         // Completada (Azul)
+        default: "badge-ghost"
+    },
+    
+    PAYMENT_METHOD: {
+        401: "badge-success text-white",
+        402: "badge-success text-white",
+        403: "badge-warning text-white",
+        404: "badge-warning text-white",
         default: "badge-ghost"
     },
 

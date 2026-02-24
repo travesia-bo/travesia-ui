@@ -109,7 +109,10 @@ export interface PaymentHistoryResponse {
     id: number;
     amount: number;
     date: string; // LocalDateTime viene como string ISO
-    paymentMethodType: number; // Código del parámetro (ej: 401)
+    paymentMethodName: string;
+    paymentMethodCode: number; 
+    paymentStatusName: string;
+    paymentStatusCode: number; 
     bankReference: string;
 }
 
