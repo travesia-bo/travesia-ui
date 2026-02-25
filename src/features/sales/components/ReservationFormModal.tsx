@@ -30,13 +30,17 @@ interface Props {
 const clientSchema = z.object({
     agreedPrice: z.coerce.number().min(0, "Precio inválido"),
     clientId: z.number().nullable().optional(),
+
     newClientData: z.object({
         firstName: z.string().min(2, "Mínimo 2 letras"),
         paternalSurname: z.string().optional().nullable(),
         maternalSurname: z.string().optional().nullable(),
+
         phoneNumber: z.any().transform(Number).refine((n) => !isNaN(n) && n > 0, "Celular inválido"),
+
         email: z.string().email().optional().nullable().or(z.literal("")),
         identityCard: z.string().min(4, "CI requerido"),
+        
         cityId: z.any().transform(Number).refine((n) => !isNaN(n) && n > 0, "Ciudad requerida"),
         // ✅ CORRECCIÓN: Quitamos { required_error: ... } y dejamos solo el .min()
         birthDate: z.any()
@@ -55,6 +59,9 @@ const clientSchema = z.object({
         // ✅ Asegurar que estos sean tratados como números en el esquema
         clientType: z.any().transform(Number).refine((n) => !isNaN(n) && n > 0, "Tipo de cliente es requerido"),
         genderType: z.any().transform(Number).refine((n) => !isNaN(n) && n > 0, "Género es requerido"),
+        grade: z.any().refine(val => val && val.trim() !== "", "El año/grado es requerido"),
+        universityId: z.any().transform(Number).refine((n) => !isNaN(n) && n > 0, "Universidad es requerida"),
+        facultyId: z.any().transform(Number).refine((n) => !isNaN(n) && n > 0, "Facultad es requerida"),
         careerId: z.any().transform(Number).refine((n) => !isNaN(n) && n > 0, "Carrera es requerida"),
     }).nullable().optional()
 }).superRefine((data, ctx) => {
@@ -174,7 +181,7 @@ if (!pkg) return null;
                 {/* 1. STEPPER FIJO: shrink-0 asegura que siempre esté visible */}
                 <div className="flex-shrink-0 mb-6 w-full">
                     <TravesiaStepper 
-                        steps={["Datos Generales", `Pasajeros (${pkg.peopleCount})`]} 
+                        steps={["Datos Generales", `Clientes (${pkg.peopleCount})`]} 
                         currentStep={currentStep} 
                     />
                 </div>

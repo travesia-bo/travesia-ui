@@ -20,6 +20,7 @@ export const TravesiaSelect = ({
     label, options, error, isLoading, isRequired, shakeKey,
     placeholder = "Seleccione...", 
     enableDefaultOption = false,
+    value,
     ...props 
 }: Props) => {
   return (
@@ -37,6 +38,7 @@ export const TravesiaSelect = ({
       <select 
         className={`select select-bordered w-full ${error ? "select-error bg-error/5" : ""}`} 
         disabled={isLoading}
+        value={value ?? ""}
         {...props}
       >
         {/* ... lógica de opciones (mantenla igual) ... */}

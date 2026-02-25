@@ -1,6 +1,6 @@
 // ClientSlot.tsx
 import { useState } from "react";
-import { useFormContext } from "react-hook-form";
+import { Controller, useFormContext } from "react-hook-form";
 import { UserPlus, Search, CheckCircle2, BookOpen, AlertCircle } from "lucide-react"; // Asegúrate de importar AlertCircle
 import { useQuery } from "@tanstack/react-query";
 
@@ -14,7 +14,7 @@ import { TravesiaDateTimePicker } from "../../../../components/ui/TravesiaDateTi
 import { useParameters } from "../../../../hooks/useParameters";
 import { useCities } from "../../../../hooks/useCities";
 import { searchClients } from "../../services/reservationService";
-import { getCareers } from "../../services/academicService";
+import { getCareers, getUniversities, getFaculties } from "../../services/academicService";
 import type { ClientSearchResult } from "../../types";
 
 interface Props {
@@ -32,11 +32,24 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
     const { parameters: genderOptions, isLoading: loadingGenders } = useParameters("GENDER_TYPE");
     const { parameters: clientTypeOptions, isLoading: loadingClientTypes } = useParameters("CLIENT_TYPE");
     const { data: cities = [], isLoading: loadingCities } = useCities();
+
     const { data: careers = [], isLoading: loadingCareers } = useQuery({
         queryKey: ['careers'],
         queryFn: getCareers,
         staleTime: 1000 * 60 * 60
     });
+    // ✅ NUEVOS HOOKS ACADÉMICOS
+    const { data: universities = [], isLoading: loadingUniversities } = useQuery({
+        queryKey: ['universities'],
+        queryFn: getUniversities,
+        staleTime: 1000 * 60 * 60
+    });
+    const { data: faculties = [], isLoading: loadingFaculties } = useQuery({
+        queryKey: ['faculties'],
+        queryFn: getFaculties,
+        staleTime: 1000 * 60 * 60
+    });
+
     const { data: clients = [], isLoading: loadingClients } = useQuery({
         queryKey: ['clients', 'all'],
         queryFn: () => searchClients(''),
@@ -65,7 +78,6 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
             setValue(`clients.${index}.clientId`, null);
 
             setValue(`clients.${index}.newClientData.clientType`, 701); 
-            setValue(`clients.${index}.newClientData.cityId`, 1); 
 
             setValue(`clients.${index}.newClientData.clientType`, undefined);
             setValue(`clients.${index}.newClientData.genderType`, undefined);
@@ -157,118 +169,214 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
 
                     {/* === MODO 2: CREAR CLIENTE === */}
                     {mode === "NEW" && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                             {/* Nota: Al estar en modo NEW, react-hook-form validará los campos internos
-                                 y el error global de 'clientId' desaparecerá eventualmente al validar,
-                                 pero el 'clearErrors' del handleModeChange ayuda visualmente. */}
-                            
-                            <TravesiaInput
-                                label="Nombres"
-                                placeholder="Ej: Juan Pablo"
-                                {...register(`clients.${index}.newClientData.firstName`)}
-                                error={currentErrors.firstName?.message}
-                            />
-                             {/* ... resto de inputs (Paterno, Materno, CI, etc.) ... */}
-                            <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-5">
+                            {/* --- BLOQUE 1: DATOS PERSONALES --- */}
+                            {/* El contenedor principal sigue siendo de 1 col en movil y 2 en desktop */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                
                                 <TravesiaInput
-                                    label="Ap. Paterno"
-                                    placeholder="Pérez"
-                                    {...register(`clients.${index}.newClientData.paternalSurname`)}
-                                    error={currentErrors.paternalSurname?.message}
+                                    label="Nombres"
+                                    placeholder="EJ: JUAN PABLO"
+                                    uppercase
+                                    {...register(`clients.${index}.newClientData.firstName`)}
+                                    error={currentErrors.firstName?.message}
                                 />
-                                <TravesiaInput
-                                    label="Ap. Materno"
-                                    placeholder="(Opcional)"
-                                    {...register(`clients.${index}.newClientData.maternalSurname`)}
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2">
-                                <TravesiaInput
-                                    label="CI"
-                                    placeholder="123456 LP"
-                                    {...register(`clients.${index}.newClientData.identityCard`)}
-                                    error={currentErrors.identityCard?.message}
-                                />
-                                <TravesiaDateTimePicker 
-                                    label="Fecha Nac." 
-                                    name={`clients.${index}.newClientData.birthDate`}
-                                    control={control} 
-                                    isBirthDate={true}
-                                    // ✅ CAMBIO: El calendario bloqueará fechas recientes
-                                    maxDate={eighteenYearsAgo} 
-                                    helperText={currentErrors.birthDate?.message}
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2">
-                                <TravesiaInput
-                                    label="Celular"
-                                    type="number"
-                                    placeholder="70000000"
-                                    {...register(`clients.${index}.newClientData.phoneNumber`, { valueAsNumber: true })}
-                                    error={currentErrors.phoneNumber?.message}
-                                />
-                                <TravesiaSelect
-                                    label="Ciudad"
-                                    options={(cities || []).map(c => ({ value: c.id, label: c.name }))}
-                                    isLoading={loadingCities}
-                                    {...register(`clients.${index}.newClientData.cityId`, { valueAsNumber: true })}
-                                    error={currentErrors.cityId?.message}
-                                />
-                            </div>
-
-                            <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3 p-3 bg-base-200/50 rounded-lg border border-base-200">
-                                <div className="flex items-center gap-2 text-xs font-bold text-primary mb-1 md:col-span-2">
-                                    <BookOpen size={14}/> Datos Académicos
+                                
+                                {/* ✅ FIX: grid-cols-1 en celular, sm:grid-cols-2 en pantallas medias */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <TravesiaInput
+                                        label="Ap. Paterno"
+                                        placeholder="Pérez"
+                                        uppercase
+                                        {...register(`clients.${index}.newClientData.paternalSurname`)}
+                                    />
+                                    <TravesiaInput
+                                        label="Ap. Materno"
+                                        placeholder="(Opcional)"
+                                        uppercase
+                                        {...register(`clients.${index}.newClientData.maternalSurname`)}
+                                    />
                                 </div>
-                                <TravesiaSelect
-                                    label="Tipo de Cliente"
-                                    options={[
-                                        ...(clientTypeOptions || []).map((p: any) => ({
-                                            value: p.numericCode ?? p.id, 
-                                            label: p.name
-                                        }))
-                                    ]}
-                                    isLoading={loadingClientTypes}
-                                    {...register(`clients.${index}.newClientData.clientType`, { valueAsNumber: true })}
-                                    error={currentErrors.clientType?.message}
-                                />
 
-                                <RichSelect
-                                    label="Carrera"
-                                    placeholder="Buscar carrera..."
-                                    options={(careers || []).map(c => ({
-                                        value: c.id,
-                                        label: c.name,
-                                        subtitle: c.facultyName
-                                    }))}
-                                    isLoading={loadingCareers}
-                                    value={watch(`clients.${index}.newClientData.careerId`)}
-                                    onChange={(val) => setValue(`clients.${index}.newClientData.careerId`, Number(val))}
-                                    error={currentErrors.careerId?.message}
-                                />
+                                {/* ✅ FIX: grid-cols-1 sm:grid-cols-2 */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <TravesiaInput
+                                        label="CI"
+                                        placeholder="123456 LP"
+                                        uppercase
+                                        {...register(`clients.${index}.newClientData.identityCard`)}
+                                        error={currentErrors.identityCard?.message}
+                                    />
+                                    <TravesiaDateTimePicker 
+                                        label="Fecha Nac." 
+                                        name={`clients.${index}.newClientData.birthDate`}
+                                        control={control} 
+                                        isBirthDate={true}
+                                        maxDate={eighteenYearsAgo} 
+                                        helperText={currentErrors.birthDate?.message}
+                                    />
+                                </div>
+
+                                {/* ✅ FIX: grid-cols-1 sm:grid-cols-2 */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <TravesiaInput
+                                        label="Celular"
+                                        type="number"
+                                        placeholder="70000000"
+                                        {...register(`clients.${index}.newClientData.phoneNumber`, { valueAsNumber: true })}
+                                        error={currentErrors.phoneNumber?.message}
+                                    />
+                                    <Controller
+                                        control={control}
+                                        name={`clients.${index}.newClientData.genderType`}
+                                        render={({ field: { onChange, value } }) => (
+                                            <TravesiaSelect
+                                                label="Género"
+                                                options={[
+                                                    ...(genderOptions || []).map((p: any) => ({ 
+                                                        value: p.numericCode ?? p.id,
+                                                        label: p.name 
+                                                    }))
+                                                ]}
+                                                isLoading={loadingGenders}
+                                                value={value}
+                                                onChange={(e) => onChange(Number(e.target.value))}
+                                                error={currentErrors.genderType?.message}
+                                            />
+                                        )}
+                                    />
+                                </div>
+
+                                {/* ✅ FIX: grid-cols-1 sm:grid-cols-2 */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <TravesiaInput
+                                        label="Email"
+                                        type="email"
+                                        placeholder="(Opcional)"
+                                        {...register(`clients.${index}.newClientData.email`)}
+                                    />
+                                    <Controller
+                                        control={control}
+                                        name={`clients.${index}.newClientData.cityId`}
+                                        render={({ field: { onChange, value } }) => (
+                                            <TravesiaSelect
+                                                label="Ciudad"
+                                                options={(cities || []).map(c => ({ value: c.id, label: c.name }))}
+                                                isLoading={loadingCities}
+                                                value={value}
+                                                onChange={(e) => onChange(Number(e.target.value))}
+                                                error={currentErrors.cityId?.message}
+                                            />
+                                        )}
+                                    />
+                                </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-2">
-                                <TravesiaSelect
-                                    label="Género"
-                                    options={[
-                                        { value: "", label: "Seleccione" },
-                                        ...(genderOptions || []).map((p: any) => ({ 
-                                            value: p.numericCode ?? p.id,
-                                            label: p.name 
-                                        }))
-                                    ]}
-                                    isLoading={loadingGenders}
-                                    {...register(`clients.${index}.newClientData.genderType`, { valueAsNumber: true })}
-                                    error={currentErrors.genderType?.message}
+                            {/* --- BLOQUE 2: DATOS ACADÉMICOS --- */}
+                            {/* Este bloque ya era responsive con md:grid-cols-2, solo le ajusté los gaps */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-base-200/50 rounded-xl border border-base-200">
+                                <div className="flex items-center gap-2 text-xs font-bold text-primary mb-1 md:col-span-2">
+                                    <BookOpen size={16}/> Información Académica
+                                </div>
+
+                                <Controller
+                                    control={control}
+                                    name={`clients.${index}.newClientData.clientType`}
+                                    defaultValue={701} 
+                                    render={({ field: { onChange, value } }) => (
+                                        <TravesiaSelect
+                                            label="Tipo de Cliente"
+                                            options={[
+                                                ...(clientTypeOptions || []).map((p: any) => ({
+                                                    value: p.numericCode ?? p.id, 
+                                                    label: p.name
+                                                }))
+                                            ]}
+                                            isLoading={loadingClientTypes}
+                                            value={value}
+                                            onChange={(e) => onChange(Number(e.target.value))}
+                                            error={currentErrors.clientType?.message}
+                                        />
+                                    )}
                                 />
-                                <TravesiaInput
-                                    label="Email"
-                                    type="email"
-                                    placeholder="(Opcional)"
-                                    {...register(`clients.${index}.newClientData.email`)}
+
+                                <Controller
+                                    control={control}
+                                    name={`clients.${index}.newClientData.universityId`}
+                                    render={({ field: { onChange, value } }) => (
+                                        <RichSelect
+                                            label="Universidad"
+                                            placeholder="Buscar universidad..."
+                                            options={(universities || []).map((u: any) => ({
+                                                value: u.id,
+                                                label: u.name,
+                                                subtitle: u.acronym || 'Universidad'
+                                            }))}
+                                            isLoading={loadingUniversities}
+                                            value={value}
+                                            onChange={(val) => onChange(Number(val))}
+                                            error={currentErrors.universityId?.message}
+                                        />
+                                    )}
+                                />
+
+                                <Controller
+                                    control={control}
+                                    name={`clients.${index}.newClientData.facultyId`}
+                                    render={({ field: { onChange, value } }) => (
+                                        <RichSelect
+                                            label="Facultad"
+                                            placeholder="Buscar facultad..."
+                                            options={(faculties || []).map((f: any) => ({
+                                                value: f.id,
+                                                label: f.name,
+                                            }))}
+                                            isLoading={loadingFaculties}
+                                            value={value}
+                                            onChange={(val) => onChange(Number(val))}
+                                            error={currentErrors.facultyId?.message}
+                                        />
+                                    )}
+                                />
+
+                                <Controller
+                                    control={control}
+                                    name={`clients.${index}.newClientData.careerId`}
+                                    render={({ field: { onChange, value } }) => (
+                                        <RichSelect
+                                            label="Carrera"
+                                            placeholder="Buscar carrera..."
+                                            options={(careers || []).map((c: any) => ({
+                                                value: c.id,
+                                                label: c.name,
+                                                subtitle: c.facultyName
+                                            }))}
+                                            isLoading={loadingCareers}
+                                            value={value}
+                                            onChange={(val) => onChange(Number(val))}
+                                            error={currentErrors.careerId?.message}
+                                        />
+                                    )}
+                                />
+
+                                <Controller
+                                    control={control}
+                                    name={`clients.${index}.newClientData.grade`}
+                                    render={({ field: { onChange, value } }) => (
+                                        <TravesiaSelect
+                                            label="Año / Grado"
+                                            options={[
+                                                { value: "1er AÑO", label: "1er AÑO" },
+                                                { value: "2do AÑO", label: "2do AÑO" },
+                                                { value: "3er AÑO", label: "3er AÑO" },
+                                                { value: "4to AÑO", label: "4to AÑO" },
+                                                { value: "5to AÑO", label: "5to AÑO" },
+                                            ]}
+                                            value={value}
+                                            onChange={(e) => onChange(e.target.value)}
+                                            error={currentErrors.grade?.message}
+                                        />
+                                    )}
                                 />
                             </div>
                         </div>
@@ -279,6 +387,7 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
                             label="Precio Acordado"
                             type="number"
                             step="0.01"
+                            readOnly
                             {...register(`clients.${index}.agreedPrice`, { valueAsNumber: true })}
                             className="font-mono font-bold text-primary"
                         />

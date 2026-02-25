@@ -155,7 +155,10 @@ export const RichSelect = ({ label, placeholder, options, value, onChange, error
     return (
         <div className={`form-control w-full ${isShaking ? 'animate-shake' : ''}`}>
             <label className="label">
-                <span className="label-text font-medium flex items-center gap-2">{icon} {label}</span>
+                {/* ✅ FIX: Si hay error, el label se pinta de texto-error */}
+                <span className={`label-text font-medium flex items-center gap-2 ${error ? "text-error font-bold" : ""}`}>
+                    {icon} {label}
+                </span>
             </label>
             <div className="relative">
                 <button

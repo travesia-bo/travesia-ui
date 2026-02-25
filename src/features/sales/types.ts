@@ -45,10 +45,13 @@ export interface NewClientData {
     phoneNumber: number;
     email?: string | null;
     identityCard: string;
+    grade: string;
     clientType: number; // Parametro (ej: 701)
     genderType: number; // Parametro (ej: 721)
     birthDate: string; // YYYY-MM-DD
     cityId: number;
+    universityId: number;
+    facultyId: number;
     careerId: number;
 }
 
