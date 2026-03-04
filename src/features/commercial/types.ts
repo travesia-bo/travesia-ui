@@ -44,6 +44,10 @@ export interface PackageStatusUpdate {
     status: boolean;
 }
 
+export interface PackageNegotiableUpdate {
+    isNegotiable: boolean;
+}
+
 export interface PackageVisibilityUpdate {
     isPublic: boolean;
 }

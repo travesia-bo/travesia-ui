@@ -6,7 +6,7 @@ import { PARAM_CATEGORIES } from '../../../config/constants';
 import type { Package, PackageDetail } from '../types';
 import { useCheckPermission } from '../../../hooks/useCheckPermission';
 // Servicios
-import { updatePackageStatus, updatePackageVisibility, deletePackage } from '../services/packageService';
+import { updatePackageStatus, updatePackageVisibility, deletePackage, updatePackageNegotiable } from '../services/packageService';
 // UI Components
 import { TravesiaTable, type Column } from '../../../components/ui/TravesiaTable';
 import { TravesiaInput } from '../../../components/ui/TravesiaInput';
@@ -61,6 +61,7 @@ export const PackagesPage = () => {
     // C. Modales de Confirmación
     const [packageToToggle, setPackageToToggle] = useState<Package | null>(null); 
     const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);      
+    const [isNegotiableModalOpen, setIsNegotiableModalOpen] = useState(false);      
     const [isVisibilityModalOpen, setIsVisibilityModalOpen] = useState(false); 
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);      
 
@@ -78,6 +79,17 @@ export const PackagesPage = () => {
             success("Estado del paquete actualizado.");
         },
         onError: () => toastError("Error al actualizar el estado.")
+    });
+
+    const negotiableMutation = useMutation({
+        mutationFn: ({ id, isNegotiable }: { id: number; isNegotiable: boolean }) => updatePackageNegotiable(id, isNegotiable),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['packages'] });
+            setIsNegotiableModalOpen(false);
+            setPackageToToggle(null);
+            success("Capacidad de negociación actualizada.");
+        },
+        onError: () => toastError("Error al actualizar estado de negociación.")
     });
 
     const visibilityMutation = useMutation({
@@ -121,9 +133,20 @@ export const PackagesPage = () => {
         setIsStatusModalOpen(true);
     };
 
+    const handleNegotiableClick = (pkg: Package) => {
+        setPackageToToggle(pkg);
+        setIsNegotiableModalOpen(true);
+    };
+
     const confirmStatusChange = () => {
         if (packageToToggle) {
             statusMutation.mutate({ id: packageToToggle.id, status: !packageToToggle.status });
+        }
+    };
+
+    const confirmNegotiableChange = () => {
+        if (packageToToggle) {
+            negotiableMutation.mutate({ id: packageToToggle.id, isNegotiable: !packageToToggle.isPriceNegotiable });
         }
     };
 
@@ -230,6 +253,25 @@ export const PackagesPage = () => {
                             checked={row.status} 
                             onChange={() => {}} 
                             isLoading={statusMutation.isPending && statusMutation.variables?.id === row.id}
+                        />
+                    </div>
+                </div>
+            )
+        },
+        {
+            // header: <span className="flex items-center gap-1"><Power size={14}/> Activo</span>,
+            header: 'Negociable',
+            className: 'text-center w-20',
+            render: (row) => (
+                <div 
+                    className="flex justify-center cursor-pointer" 
+                    onClick={(e) => { e.stopPropagation(); handleNegotiableClick(row); }}
+                >
+                    <div className="pointer-events-none">
+                        <TravesiaSwitch 
+                            checked={row.isPriceNegotiable} 
+                            onChange={() => {}} 
+                            isLoading={negotiableMutation.isPending && negotiableMutation.variables?.id === row.id}
                         />
                     </div>
                 </div>
@@ -352,6 +394,19 @@ export const PackagesPage = () => {
                 confirmText={packageToToggle?.status ? "Sí, Desactivar" : "Sí, Activar"}
                 variant={packageToToggle?.status ? "warning" : "primary"}
                 isLoading={statusMutation.isPending}
+            />
+
+            <ConfirmationModal
+                isOpen={isNegotiableModalOpen}
+                onClose={() => { setIsNegotiableModalOpen(false); setPackageToToggle(null); }}
+                onConfirm={confirmNegotiableChange}
+                title={packageToToggle?.isPriceNegotiable ? "¿Bloquear Precio?" : "¿Hacer Negociable?"}
+                message={packageToToggle?.isPriceNegotiable 
+                    ? `Los vendedores ya NO podrán negociar ni aplicar descuentos al paquete "${packageToToggle.name}". El precio será fijo.` 
+                    : `Los vendedores podrán alterar el precio de venta del paquete "${packageToToggle?.name}" hasta llegar al Costo Base Interno (MinPrice).`}
+                confirmText={packageToToggle?.isPriceNegotiable ? "Sí, Bloquear" : "Sí, Permitir"}
+                variant={packageToToggle?.isPriceNegotiable ? "warning" : "primary"}
+                isLoading={negotiableMutation.isPending}
             />
 
             <ConfirmationModal

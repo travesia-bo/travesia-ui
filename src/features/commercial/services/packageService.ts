@@ -1,6 +1,6 @@
 import api from '../../../lib/axios';
 import type { 
-    Package, PackageStatusUpdate, PackageVisibilityUpdate,
+    Package, PackageStatusUpdate, PackageNegotiableUpdate, PackageVisibilityUpdate,
     CreatePackageRequest, PackageDetailResponse, 
     AddPackageDetailRequest, UpdatePackageDetailRequest 
 } from "../types";
@@ -17,6 +17,11 @@ export const getPackages = async (): Promise<Package[]> => {
 export const updatePackageStatus = async (id: number, status: boolean): Promise<void> => {
     const payload: PackageStatusUpdate = { status };
     await api.patch(`${BASE_URL}/${id}/status`, payload);
+};
+
+export const updatePackageNegotiable = async (id: number, isNegotiable: boolean): Promise<void> => {
+    const payload: PackageNegotiableUpdate = { isNegotiable };
+    await api.patch(`${BASE_URL}/${id}/negotiable`, payload);
 };
 
 // 3. ACTUALIZAR VISIBILIDAD (Público/Privado)
