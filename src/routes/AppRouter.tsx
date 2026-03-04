@@ -9,6 +9,7 @@ import { ProvidersPage } from "../features/inventory/pages/ProvidersPage";
 import { useTheme } from "../hooks/useTheme"; 
 import { ProductsPage } from "../features/inventory/pages/ProductsPage";
 import { PackagesPage } from "../features/commercial/pages/PackagesPage";
+import { SellerPage } from "../features/commercial/pages/SellerPage";
 import { SellerCatalogPage } from "../features/sales/pages/SellerCatalogPage";
 import { ReservationsPage } from "../features/sales/pages/ReservationsPage";
 import { FinancialReportPage } from "../features/sales/pages/FinancialReportPage";
@@ -34,6 +35,7 @@ export const AppRouter = () => {
                 <Route path="/commercial/providers" element={<ProvidersPage />} />
                 <Route path="/commercial/products" element={<ProductsPage />} />
                 <Route path="/commercial/packages" element={<PackagesPage />} />
+                <Route path="/commercial/sellers" element={<SellerPage />} />
                 {/* --- MÓDULO DE VENTAS --- */}
                 <Route path="/sales/pos" element={<SellerCatalogPage />} />
                 <Route path="/sales/reservations" element={<ReservationsPage />} />
