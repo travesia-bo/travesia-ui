@@ -657,7 +657,8 @@ export const PackageFormModal = ({ isOpen, onClose, packageToEdit }: Props) => {
                                         type="number"
                                         step="0.01"
                                         placeholder="0.00"
-                                        disabled={selectedItems.length > 1}
+                                        // disabled={selectedItems.length > 1}
+                                        disabled={false}
                                         // Pasamos clases específicas para estilo financiero grande
                                         className={`font-mono text-lg font-bold ${Number(watchedTotalPrice) < calculatedMinPrice ? 'text-error' : 'text-success'}`}
                                         value={value} 

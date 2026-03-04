@@ -240,14 +240,6 @@ export const PackagesPage = () => {
             className: 'text-right',
             render: (row) => (
                 <div className="flex justify-end items-center gap-2">
-                    <button 
-                        className="btn btn-square btn-sm btn-ghost text-info hover:bg-info/10"
-                        onClick={() => { setSelectedPackageForDetails(row); setDetailsModalOpen(true); }}
-                        title="Ver productos del paquete"
-                    >
-                        <Eye size={18} />
-                    </button>
-
                     {/* ✅ NUEVO: Botón Detalles Financieros (Calculadora) */}
                     <button 
                         className="btn btn-square btn-sm btn-ghost text-success hover:bg-success/10"
@@ -255,6 +247,14 @@ export const PackagesPage = () => {
                         title="Ver proyección financiera"
                     >
                         <Calculator size={18} />
+                    </button>
+
+                    <button 
+                        className="btn btn-square btn-sm btn-ghost text-info hover:bg-info/10"
+                        onClick={() => { setSelectedPackageForDetails(row); setDetailsModalOpen(true); }}
+                        title="Ver productos del paquete"
+                    >
+                        <Eye size={18} />
                     </button>
 
                     <CrudButtons 

@@ -23,6 +23,7 @@ export const PackageFinanceModal = ({ isOpen, onClose, pkg }: Props) => {
         <TravesiaModal
             isOpen={isOpen}
             onClose={onClose}
+            closeOnOutsideClick={true}
             title={
                 <div className="flex flex-col">
                     <span className="flex items-center gap-2">
