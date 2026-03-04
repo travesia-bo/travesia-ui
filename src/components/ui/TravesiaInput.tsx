@@ -7,7 +7,7 @@ interface Props extends React.InputHTMLAttributes<HTMLInputElement> {
   icon?: string;
   isRequired?: boolean; // NUEVA PROPIEDAD
   shakeKey?: number; // NUEVA PROP
-  helperText?: string;
+  helperText?: React.ReactNode;
   uppercase?: boolean;
 }
 
@@ -59,6 +59,11 @@ export const TravesiaInput = forwardRef<HTMLInputElement, Props>(({
           `}
           onChange={handleChange} // Usamos nuestro handler
           onBlur={handleBlur}     // Usamos nuestro handler
+          onWheel={(e) => {
+            if (props.type === "number") {
+                (e.target as HTMLInputElement).blur();
+            }
+          }}
           {...props}
         />
 

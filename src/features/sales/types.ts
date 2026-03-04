@@ -9,12 +9,13 @@ export interface SellerPackage {
     imageQrUrl?: string;
     peopleCount: number;
     availableStock: number;
-    
+    isPriceNegotiable: boolean;
+
     // Precios
     totalPrice: number;
     pricePerPerson: number;
     minPrice: number;
-    commission: number; // ✅ DATO CLAVE PARA VENDEDOR
+    commission: number;
     
     // Detalles (Simplificados para el catálogo)
     details: SellerPackageDetail[];

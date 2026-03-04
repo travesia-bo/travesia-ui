@@ -21,9 +21,10 @@ interface Props {
     index: number;
     isExpanded: boolean;
     onToggle: () => void;
+    isPriceNegotiable: boolean;
 }
 
-export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
+export const ClientSlot = ({ index, isExpanded, onToggle, isPriceNegotiable }: Props) => {
     // 1. ✅ Extraemos 'clearErrors'
     const { register, control, setValue, watch, clearErrors, formState: { errors } } = useFormContext();
     const [mode, setMode] = useState<"EXISTING" | "NEW">("EXISTING");
@@ -223,6 +224,12 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
                                         label="Celular"
                                         type="number"
                                         placeholder="70000000"
+                                        isRequired
+                                        onInput={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                            if (e.target.value.length > 8) {
+                                                e.target.value = e.target.value.slice(0, 8);
+                                            }
+                                        }}
                                         {...register(`clients.${index}.newClientData.phoneNumber`, { valueAsNumber: true })}
                                         error={currentErrors.phoneNumber?.message}
                                     />
@@ -381,16 +388,46 @@ export const ClientSlot = ({ index, isExpanded, onToggle }: Props) => {
                             </div>
                         </div>
                     )}
-
                     <div className="mt-4 pt-4 border-t border-base-200">
-                        <TravesiaInput
-                            label="Precio Acordado"
-                            type="number"
-                            step="0.01"
-                            readOnly
-                            {...register(`clients.${index}.agreedPrice`, { valueAsNumber: true })}
-                            className="font-mono font-bold text-primary"
-                        />
+                        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+                            <div className="flex-1 w-full">
+                                <TravesiaInput
+                                    label="Precio Acordado (Bs.)"
+                                    type="number"
+                                    step="0.01"
+                                    // Si no es negociable, activamos readOnly
+                                    readOnly={!isPriceNegotiable} 
+                                    {...register(`clients.${index}.agreedPrice`, { valueAsNumber: true })}
+                                    // Cambiamos el estilo dinámicamente
+                                    className={`font-mono font-bold text-lg transition-all ${
+                                        isPriceNegotiable 
+                                            ? "text-success bg-success/5 border-success focus:border-success focus:ring-success/20" // Estilo Habilitado (Verde, Editable)
+                                            : "text-base-content/50 bg-base-200 cursor-not-allowed" // Estilo Bloqueado (Gris)
+                                    }`}
+                                    // Mensaje de ayuda dinámico
+                                    helperText={
+                                        isPriceNegotiable 
+                                            ? "El precio es negociable. Puedes ajustar el monto." 
+                                            : "El precio es fijo y no admite modificaciones."
+                                    }
+                                />
+                            </div>
+                            
+                            {/* Opcional: Un pequeño candado o check visual de estado */}
+                            <div className="hidden md:flex flex-col items-center justify-center p-3 rounded-xl bg-base-200/50 min-w-[120px] shrink-0">
+                                {isPriceNegotiable ? (
+                                    <>
+                                        <span className="text-success font-bold text-xs uppercase tracking-wider mb-1">Negociable</span>
+                                        <span className="text-[10px] opacity-60 text-center leading-tight">Monto editable</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="text-error font-bold text-xs uppercase tracking-wider mb-1">Precio Fijo</span>
+                                        <span className="text-[10px] opacity-60 text-center leading-tight">No editable</span>
+                                    </>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

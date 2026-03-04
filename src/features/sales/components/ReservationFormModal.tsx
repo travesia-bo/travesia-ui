@@ -234,6 +234,7 @@ if (!pkg) return null;
                                             index={index}
                                             isExpanded={expandedSlot === index}
                                             onToggle={() => setExpandedSlot(expandedSlot === index ? null : index)}
+                                            isPriceNegotiable={pkg.isPriceNegotiable}
                                         />
                                     ))}
                                     

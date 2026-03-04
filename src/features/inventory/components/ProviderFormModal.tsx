@@ -237,6 +237,11 @@ export const ProviderFormModal = ({ isOpen, onClose, providerToEdit }: Props) =>
                             placeholder="70012345"
                             icon="phone"
                             isRequired
+                            onInput={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                if (e.target.value.length > 8) {
+                                    e.target.value = e.target.value.slice(0, 8);
+                                }
+                            }}
                             error={errors.contactPhoneNumber?.message}
                             shakeKey={submitCount + manualShake}
                             {...register("contactPhoneNumber")}
