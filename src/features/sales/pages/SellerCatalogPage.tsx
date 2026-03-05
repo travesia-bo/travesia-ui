@@ -128,9 +128,9 @@ export const SellerCatalogPage = () => {
             header: "Precio Venta",
             render: (row) => (
                 <div className="flex flex-col">
-                    <span className="font-mono font-bold text-base text-base-content">Bs. {row.totalPrice}</span>
+                    <span className="font-mono font-bold text-base text-base-content">Bs. {row.pricePerPerson}</span>
                     {row.peopleCount > 1 && (
-                        <span className="text-[10px] opacity-60">Bs. {row.pricePerPerson} p/p</span>
+                        <span className="text-[10px] opacity-60">({row.totalPrice} total)</span>
                     )}
                 </div>
             )

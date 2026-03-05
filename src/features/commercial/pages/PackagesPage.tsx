@@ -213,9 +213,9 @@ export const PackagesPage = () => {
             accessorKey: 'totalPrice',
             render: (row) => (
                 <div className="flex flex-col">
-                    <span className="font-mono font-bold text-sm text-success">Bs. {row.totalPrice}</span>
+                    <span className="font-mono font-bold text-sm text-success">Bs. {row.pricePerPerson}</span>
                     {row.peopleCount > 1 && (
-                        <span className="text-[10px] opacity-60">({row.pricePerPerson} c/u)</span>
+                        <span className="text-[10px] opacity-60">({row.totalPrice} total)</span>
                     )}
                 </div>
             )
