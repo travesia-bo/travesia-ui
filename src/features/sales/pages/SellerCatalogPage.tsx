@@ -259,7 +259,7 @@ export const SellerCatalogPage = () => {
                                         {/* Precio */}
                                         <div>
                                             <span className="text-[10px] uppercase font-bold text-base-content/50 block">Precio Venta</span>
-                                            <span className="font-mono font-bold text-lg">Bs. {pkg.totalPrice}</span>
+                                            <span className="font-mono font-bold text-lg">Bs. {pkg.pricePerPerson}</span>
                                         </div>
                                         {/* Ganancia (Resaltado) */}
                                         <div>
@@ -273,10 +273,10 @@ export const SellerCatalogPage = () => {
                                     {/* Detalles Extras */}
                                     <div className="flex items-center gap-2 text-xs text-base-content/70">
                                         <div className="flex items-center gap-1 bg-base-200 px-2 py-1 rounded-md">
-                                            <Users size={12}/>Bs. {pkg.pricePerPerson}
+                                            <Users size={12}/>{pkg.peopleCount}
                                         </div>
                                         {pkg.peopleCount > 1 && (
-                                            <span className="opacity-60">({pkg.peopleCount} total)</span>
+                                            <span className="opacity-60">({pkg.totalPrice} total)</span>
                                         )}
                                     </div>
 
