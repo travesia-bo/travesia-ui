@@ -273,10 +273,10 @@ export const SellerCatalogPage = () => {
                                     {/* Detalles Extras */}
                                     <div className="flex items-center gap-2 text-xs text-base-content/70">
                                         <div className="flex items-center gap-1 bg-base-200 px-2 py-1 rounded-md">
-                                            <Users size={12}/> {pkg.peopleCount} Pers.
+                                            <Users size={12}/>Bs. {pkg.pricePerPerson}
                                         </div>
                                         {pkg.peopleCount > 1 && (
-                                            <span className="opacity-60">({pkg.pricePerPerson} c/u)</span>
+                                            <span className="opacity-60">({pkg.peopleCount} total)</span>
                                         )}
                                     </div>
 
