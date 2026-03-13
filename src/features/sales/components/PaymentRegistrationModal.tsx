@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
@@ -63,16 +63,29 @@ export const PaymentRegistrationModal = ({ isOpen, onClose }: Props) => {
     const today = new Date().toISOString().split('T')[0];
 
     // 2. ✅ AÑADIMOS 'register', 'errors' Y EL DEFAULT VALUE DE LA FECHA
-    const { register, control, trigger, getValues, watch, formState: { errors, submitCount } } = useForm({
+    const { register, control, trigger, getValues, watch, reset, formState: { errors, submitCount } } = useForm({
         resolver: zodResolver(paymentHeaderSchema),
         defaultValues: { 
             totalAmount: 0, 
             paymentMethodType: 0, 
             bankReference: "",
-            transactionDate: today // <-- NUEVO
+            transactionDate: today
         },
         mode: "onChange"
     });
+    useEffect(() => {
+        if (isOpen) {
+            setStep(1);
+            setApplications([]);
+            setManualShake(0);
+            reset({
+                totalAmount: 0,
+                paymentMethodType: 0,
+                bankReference: "",
+                transactionDate: new Date().toISOString().split('T')[0] // Forzar la fecha actual
+            });
+        }
+    }, [isOpen, reset]);
 
     const totalAmount = watch("totalAmount");
 
