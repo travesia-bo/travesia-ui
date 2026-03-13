@@ -13,3 +13,7 @@ export const updateTransaction = async (id: number, data: UpdateTransactionReque
     const { data: response } = await api.put<TransactionResponse>(`/sales/transactions/${id}`, data);
     return response;
 };
+
+export const deleteTransaction = async (id: number): Promise<void> => {
+    await api.delete(`/sales/transactions/${id}`);
+};

@@ -1,46 +1,82 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Wallet, Eye } from "lucide-react"; // ✅ Importar Eye
+import { Wallet, Eye } from "lucide-react";
 
 // Componentes Reutilizables
 import { TravesiaTable, type Column } from "../../../components/ui/TravesiaTable";
 import { TravesiaBadge } from "../../../components/ui/TravesiaBadge";
 import { BtnExcel, CrudButtons } from "../../../components/ui/CrudButtons";
+import { ConfirmationModal } from "../../../components/ui/ConfirmationModal";
+import { useToast } from "../../../context/ToastContext";
 
 // Configuración y Servicios
-import { getTransactions } from "../services/transactionService";
+import { getTransactions, deleteTransaction } from "../services/transactionService";
 import type { TransactionResponse } from "../types";
 
 import { TransactionFormModal } from "../components/TransactionFormModal";
-// ✅ IMPORTAR NUEVO MODAL
 import { TransactionDetailsModal } from "../components/TransactionDetailsModal";
 
 export const IncomePage = () => {
+    const { success, error: toastError } = useToast();
+    const queryClient = useQueryClient();
+
     // Estados Modal Edición
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [transactionToEdit, setTransactionToEdit] = useState<TransactionResponse | null>(null);
     
-    // ✅ Estados Modal Detalles (Ojo)
+    // Estados Modal Detalles (Ojo)
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [transactionToView, setTransactionToView] = useState<TransactionResponse | null>(null);
+
+    // ✅ NUEVOS ESTADOS: Modal de Eliminación
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [transactionToDelete, setTransactionToDelete] = useState<TransactionResponse | null>(null);
 
     const { data: transactions = [], isLoading } = useQuery({
         queryKey: ['finance', 'income'],
         queryFn: getTransactions,
-        staleTime: 1000 * 60 * 5, // 5 min cache
+        staleTime: 1000 * 60 * 5, 
+    });
+
+    // ✅ MUTACIÓN PARA ELIMINAR
+    const deleteMutation = useMutation({
+        mutationFn: deleteTransaction,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['finance', 'income'] });
+            setIsDeleteModalOpen(false);
+            setTransactionToDelete(null);
+            success("Transacción eliminada correctamente");
+        },
+        onError: (err: any) => {
+            console.error(err);
+            toastError("No se pudo eliminar la transacción. Puede que ya esté aplicada a un cobro.");
+            setIsDeleteModalOpen(false);
+        }
     });
     
+    // Handlers
     const handleEdit = (transaction: TransactionResponse) => {
         setTransactionToEdit(transaction);
         setIsEditModalOpen(true);
     };
 
-    // ✅ Función para abrir Detalles
     const handleViewDetails = (transaction: TransactionResponse) => {
         setTransactionToView(transaction);
         setIsDetailsModalOpen(true);
+    };
+
+    // ✅ HANDLERS DE ELIMINACIÓN
+    const handleDeleteClick = (transaction: TransactionResponse) => {
+        setTransactionToDelete(transaction);
+        setIsDeleteModalOpen(true);
+    };
+
+    const confirmDelete = () => {
+        if (transactionToDelete) {
+            deleteMutation.mutate(transactionToDelete.id);
+        }
     };
 
     const columns: Column<TransactionResponse>[] = [
@@ -93,10 +129,10 @@ export const IncomePage = () => {
         },
         {
             header: "Acciones",
-            className: "text-right w-36", // Un poco más ancho para que entren 3 botones
+            className: "text-right w-36", 
             render: (row) => (
                 <div className="flex items-center justify-end gap-2">
-                    {/* ✅ BOTÓN DE DETALLES (OJO) */}
+                    {/* Botón Detalles */}
                     <button 
                         className="btn btn-square btn-sm btn-ghost text-info hover:bg-info/10"
                         onClick={() => handleViewDetails(row)}
@@ -105,10 +141,10 @@ export const IncomePage = () => {
                         <Eye size={18} />
                     </button>
                     
-                    {/* BOTONES CRUD ORIGINALES */}
                     <CrudButtons 
                         onEdit={() => handleEdit(row)}
-                        onDelete={() => console.log("Lógica pendiente para borrar ID:", row.id)} 
+                        // ✅ CONECTAMOS EL BOTÓN DE ELIMINAR
+                        onDelete={() => handleDeleteClick(row)} 
                     />
                 </div>
             )
@@ -131,7 +167,7 @@ export const IncomePage = () => {
                 <BtnExcel />
             </div>
 
-            {/* Tabla Reutilizable */}
+            {/* Tabla */}
             <TravesiaTable
                 data={transactions}
                 columns={columns}
@@ -148,11 +184,29 @@ export const IncomePage = () => {
                 />
             )}
 
-            {/* ✅ MODAL DE DETALLES */}
+            {/* Modal de Detalles */}
             <TransactionDetailsModal
                 isOpen={isDetailsModalOpen}
                 onClose={() => { setIsDetailsModalOpen(false); setTransactionToView(null); }}
                 transaction={transactionToView}
+            />
+
+            {/* ✅ MODAL DE CONFIRMACIÓN DE ELIMINACIÓN */}
+            <ConfirmationModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => { setIsDeleteModalOpen(false); setTransactionToDelete(null); }}
+                onConfirm={confirmDelete}
+                title="¿Eliminar Transacción?"
+                message={
+                    <>
+                        Estás a punto de eliminar permanentemente la transacción por <span className="font-bold">Bs. {transactionToDelete?.amount.toFixed(2)}</span>.
+                        <br/><br/>
+                        <span className="text-error font-bold">¡Atención!</span> Si esta transacción ya fue aplicada a una o más reservas, esas reservas perderán este pago y volverán a figurar como deuda.
+                    </>
+                }
+                confirmText="Sí, Eliminar"
+                variant="danger" // Botón rojo
+                isLoading={deleteMutation.isPending}
             />
         </div>
     );
