@@ -18,7 +18,7 @@ import { TravesiaInput } from "../../../components/ui/TravesiaInput";
 import { TravesiaSelect } from "../../../components/ui/TravesiaSelect";
 import { TravesiaFinancialInput } from "../../../components/ui/TravesiaFinancialInput";
 import { TravesiaStepper } from "../../../components/ui/TravesiaStepper";
-import { RichSelect } from "../../../components/ui/RichSelect"; // ✅ Importamos RichSelect
+import { RichSelect } from "../../../components/ui/RichSelect"; 
 import { BtnSave, BtnCancel, BtnNext, BtnBack } from "../../../components/ui/CrudButtons";
 
 interface Props {
@@ -26,11 +26,12 @@ interface Props {
     onClose: () => void;
 }
 
-// Esquema de Validación
+// 1. ✅ ESQUEMA ACTUALIZADO CON LA FECHA
 const paymentHeaderSchema = z.object({
     totalAmount: z.number().min(1, "El monto debe ser mayor a 0"),
     paymentMethodType: z.number().min(1, "Selecciona un método de pago"),
     bankReference: z.string().optional(),
+    transactionDate: z.string().min(1, "La fecha es requerida"), 
 });
 
 interface ApplicationRow {
@@ -46,6 +47,7 @@ export const PaymentRegistrationModal = ({ isOpen, onClose }: Props) => {
     // Estados
     const [step, setStep] = useState(1);
     const [applications, setApplications] = useState<ApplicationRow[]>([]);
+    const [manualShake, setManualShake] = useState(0); 
 
     // Data Fetching
     const { parameters: paymentMethods, isLoading: loadingParams } = 
@@ -57,10 +59,18 @@ export const PaymentRegistrationModal = ({ isOpen, onClose }: Props) => {
         enabled: isOpen,
     });
 
-    // Formulario
-    const { control, trigger, getValues, watch, formState: {  submitCount } } = useForm({
+    // Obtenemos la fecha de hoy para el valor por defecto (YYYY-MM-DD)
+    const today = new Date().toISOString().split('T')[0];
+
+    // 2. ✅ AÑADIMOS 'register', 'errors' Y EL DEFAULT VALUE DE LA FECHA
+    const { register, control, trigger, getValues, watch, formState: { errors, submitCount } } = useForm({
         resolver: zodResolver(paymentHeaderSchema),
-        defaultValues: { totalAmount: 0, paymentMethodType: 0, bankReference: "" },
+        defaultValues: { 
+            totalAmount: 0, 
+            paymentMethodType: 0, 
+            bankReference: "",
+            transactionDate: today // <-- NUEVO
+        },
         mode: "onChange"
     });
 
@@ -97,7 +107,7 @@ export const PaymentRegistrationModal = ({ isOpen, onClose }: Props) => {
             setManualShake(prev => prev + 1); 
         }
     };
-    // ✅ Preparar Opciones para RichSelect (Filtrando los ya agregados)
+    
     const debtorOptions = useMemo(() => {
         return debtors
             .filter(d => !applications.some(app => app.debt.id === d.reservations[0]?.id))
@@ -115,7 +125,6 @@ export const PaymentRegistrationModal = ({ isOpen, onClose }: Props) => {
             }));
     }, [debtors, applications]);
 
-    // Handler al seleccionar en RichSelect
     const handleSelectDebtor = (clientId: number | string) => {
         const client = debtors.find(d => d.id === clientId);
         if (!client) return;
@@ -164,6 +173,7 @@ export const PaymentRegistrationModal = ({ isOpen, onClose }: Props) => {
         }
     };
 
+    // 4. ✅ CORREGIMOS EL ERROR DE TYPESCRIPT PASANDO transactionDate
     const onFinalSubmit = () => {
         const dataStep1 = getValues();
         const assignedTotal = applications.reduce((sum, app) => sum + app.amountToApply, 0);
@@ -174,7 +184,10 @@ export const PaymentRegistrationModal = ({ isOpen, onClose }: Props) => {
         }
 
         mutation.mutate({
-            ...dataStep1,
+            totalAmount: dataStep1.totalAmount,
+            paymentMethodType: dataStep1.paymentMethodType,
+            bankReference: dataStep1.bankReference,
+            transactionDate: `${dataStep1.transactionDate}T00:00:00`,
             proofUrl: null,
             applications: applications.map(app => ({
                 reservationClientId: app.debt.id,
@@ -187,8 +200,6 @@ export const PaymentRegistrationModal = ({ isOpen, onClose }: Props) => {
     const assignedAmount = applications.reduce((sum, item) => sum + item.amountToApply, 0);
     const remainingAmount = totalAmount - assignedAmount;
     const isBalanced = Math.abs(remainingAmount) < 0.01;
-
-    const [manualShake, setManualShake] = useState(0); 
 
     if (!isOpen) return null;
 
@@ -221,16 +232,13 @@ export const PaymentRegistrationModal = ({ isOpen, onClose }: Props) => {
                 </div>
             }
         >
-            {/* Contenedor Principal: Flex Column para manejar Scroll vs Fijo */}
             <div className="flex flex-col h-[70vh] md:h-auto max-h-[600px] min-h-[400px]">
                 
-                {/* 1. SECCIÓN FIJA (HEADER + STEPPER + RESUMEN + BUSCADOR) */}
                 <div className="shrink-0 mb-2 space-y-4">
                     <TravesiaStepper steps={["Datos de Transacción", "Distribución de Saldo"]} currentStep={step} />
 
                     {step === 2 && (
                         <div className="animate-fade-in space-y-4">
-                            {/* ✅ HEADER RESUMEN ESTÁTICO */}
                             <div className="grid grid-cols-3 gap-2 bg-base-200 p-3 rounded-xl border border-base-300">
                                 <div className="flex flex-col items-center">
                                     <span className="text-[10px] uppercase font-bold opacity-60">Total</span>
@@ -250,14 +258,13 @@ export const PaymentRegistrationModal = ({ isOpen, onClose }: Props) => {
                                 </div>
                             </div>
 
-                            {/* ✅ BUSCADOR CON RICH SELECT (ESTÁTICO TAMBIÉN) */}
                             <div className="relative z-50">
                                 <RichSelect 
                                     label="Agregar Cliente a la Transacción"
                                     placeholder="Buscar por nombre o CI..."
                                     options={debtorOptions}
                                     onChange={handleSelectDebtor}
-                                    value={null} // Siempre resetear tras seleccionar
+                                    value={null} 
                                     icon={<Plus size={16} className="text-primary"/>}
                                 />
                             </div>
@@ -265,10 +272,8 @@ export const PaymentRegistrationModal = ({ isOpen, onClose }: Props) => {
                     )}
                 </div>
 
-                {/* 2. SECCIÓN SCROLLABLE (CONTENIDO FORMULARIO) */}
                 <div className="flex-1 overflow-y-auto px-1 custom-scrollbar pb-2">
                     
-                    {/* PASO 1 FORMULARIO */}
                     {step === 1 && (
                         <div className="space-y-4 animate-fade-in p-1 pt-2">
                             <Controller
@@ -279,40 +284,51 @@ export const PaymentRegistrationModal = ({ isOpen, onClose }: Props) => {
                                         label="Monto Total Recibido"
                                         value={value}
                                         onValueChange={(val) => onChange(val)}
-                                        error={error?.message} // ✅ Pasamos el error correctamente para el rojo/shake
+                                        error={error?.message}
                                         placeholder="Ej: 1500"
                                         shakeKey={submitCount + manualShake}
                                     />
                                 )}
                             />
 
-                            <Controller
-                                name="paymentMethodType"
-                                control={control}
-                                render={({ field, fieldState: { error } }) => (
-                                    <TravesiaSelect
-                                        label="Método de Pago"
-                                        {...field}
-                                        value={field.value ? field.value.toString() : ""} // ✅ Manejo seguro de value
-                                        onChange={(e) => field.onChange(Number(e.target.value))}
-                                        options={paymentMethods.map(p => ({ label: p.name, value: p.numericCode }))}
-                                        isLoading={loadingParams}
-                                        placeholder="Seleccione..."
-                                        error={error?.message} // ✅ Error activará el borde rojo
-                                        shakeKey={submitCount + manualShake}
-                                    />
-                                )}
-                            />
+                            {/* 3. ✅ SE AGREGA EL INPUT PARA LA FECHA JUNTO AL SELECT */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <Controller
+                                    name="paymentMethodType"
+                                    control={control}
+                                    render={({ field, fieldState: { error } }) => (
+                                        <TravesiaSelect
+                                            label="Método de Pago"
+                                            {...field}
+                                            value={field.value ? field.value.toString() : ""} 
+                                            onChange={(e) => field.onChange(Number(e.target.value))}
+                                            options={paymentMethods.map(p => ({ label: p.name, value: p.numericCode }))}
+                                            isLoading={loadingParams}
+                                            placeholder="Seleccione..."
+                                            error={error?.message} 
+                                            shakeKey={submitCount + manualShake}
+                                        />
+                                    )}
+                                />
+
+                                <TravesiaInput
+                                    label="Fecha de Transacción"
+                                    type="date"
+                                    isRequired
+                                    {...register("transactionDate")}
+                                    error={errors.transactionDate?.message as string}
+                                    shakeKey={submitCount + manualShake}
+                                />
+                            </div>
 
                             <TravesiaInput
                                 label="Referencia Bancaria (Opcional)"
                                 placeholder="Nro de comprobante, banco, o nota..."
-                                {...control.register("bankReference")}
+                                {...register("bankReference")}
                             />
                         </div>
                     )}
 
-                    {/* PASO 2 LISTA DE APLICACIONES */}
                     {step === 2 && (
                         <div className="space-y-3 animate-fade-in pt-2">
                             {applications.length === 0 ? (

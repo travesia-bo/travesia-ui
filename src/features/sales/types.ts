@@ -141,6 +141,7 @@ export interface CreatePaymentRequest {
     paymentMethodType: number;
     bankReference?: string;
     proofUrl?: string | null;
+    transactionDate: string; // YYYY-MM-DD
     applications: CreatePaymentApplication[];
 }
 
