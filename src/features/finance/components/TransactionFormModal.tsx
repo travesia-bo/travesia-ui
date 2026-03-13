@@ -2,21 +2,20 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "../../../context/ToastContext"; // Asumiendo ruta
+import { useToast } from "../../../context/ToastContext"; 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
 // Hooks & Services
 import { useParameters } from "../../../hooks/useParameters";
 import { updateTransaction } from "../services/transactionService";
-import { PARAM_CATEGORIES } from "../../../config/constants"; // PARAM_CATEGORIES.PAYMENT_METHOD, etc.
+import { PARAM_CATEGORIES } from "../../../config/constants"; 
 import type { TransactionResponse } from "../types";
 
 // UI Components
 import { TravesiaModal } from "../../../components/ui/TravesiaModal";
 import { TravesiaInput } from "../../../components/ui/TravesiaInput";
 import { TravesiaSelect } from "../../../components/ui/TravesiaSelect";
-import { TravesiaDateTimePicker } from "../../../components/ui/TravesiaDateTimePicker";
 import { BtnSave, BtnCancel } from "../../../components/ui/CrudButtons";
 
 // Esquema de Validación
@@ -26,7 +25,6 @@ const schema = z.object({
     paymentMethodType: z.coerce.number().min(1, "Seleccione un método de pago"),
     bankReference: z.string().max(200, "Máximo 200 caracteres").optional(),
     statusType: z.coerce.number().min(1, "Seleccione un estado"),
-    // proofUrl no se valida en form visual, se maneja interno
 });
 
 interface Props {
@@ -39,27 +37,31 @@ export const TransactionFormModal = ({ isOpen, onClose, transactionToEdit }: Pro
     const { success, error: toastError } = useToast();
     const queryClient = useQueryClient();
 
-    // Carga de Parámetros (No hardcodeamos nada)
+    // Carga de Parámetros
     const { parameters: paymentMethods, isLoading: loadingPayments } = useParameters(PARAM_CATEGORIES.PAYMENT_METHOD);
     const { parameters: statuses, isLoading: loadingStatuses } = useParameters(PARAM_CATEGORIES.TRANSACTION_STATUS);
 
-    const { control, register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm({
+    // Formatear hoy como YYYY-MM-DD
+    const today = new Date().toISOString().split('T')[0];
+
+    const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm({
         resolver: zodResolver(schema),
         defaultValues: {
             amount: 0,
-            transactionDate: new Date().toISOString(),
+            transactionDate: today, // Por defecto hoy
             paymentMethodType: 0,
             bankReference: "",
             statusType: 0
         }
     });
 
-    // Cargar datos al abrir para editar
+    // ✅ Cargar datos al abrir para editar
     useEffect(() => {
         if (isOpen && transactionToEdit) {
             reset({
                 amount: transactionToEdit.amount,
-                transactionDate: transactionToEdit.transactionDate,
+                // EXTRAEMOS SOLO EL DÍA (Evita el bug del salto de día por TimeZone)
+                transactionDate: transactionToEdit.transactionDate.split('T')[0], 
                 paymentMethodType: transactionToEdit.paymentMethodCode,
                 bankReference: transactionToEdit.bankReference || "",
                 statusType: transactionToEdit.statusCode
@@ -69,10 +71,7 @@ export const TransactionFormModal = ({ isOpen, onClose, transactionToEdit }: Pro
 
     // Mutación
     const mutation = useMutation({
-        mutationFn: (data: any) => updateTransaction(transactionToEdit!.id, {
-            ...data,
-            proofUrl: transactionToEdit?.proofUrl // Mantenemos la URL existente oculta
-        }),
+        mutationFn: (data: any) => updateTransaction(transactionToEdit!.id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['finance', 'income'] });
             success("Transacción actualizada correctamente");
@@ -84,14 +83,25 @@ export const TransactionFormModal = ({ isOpen, onClose, transactionToEdit }: Pro
     });
 
     const onSubmit = (data: any) => {
-        mutation.mutate(data);
+        // ✅ AQUÍ ARMAMOS EL PAYLOAD PERFECTO PARA EL BACKEND
+        const payload = {
+            ...data,
+            // Al string YYYY-MM-DD le pegamos siempre la medianoche. ¡Adiós bug de TimeZone!
+            transactionDate: `${data.transactionDate}T00:00:00`,
+            proofUrl: transactionToEdit?.proofUrl 
+        };
+        
+        mutation.mutate(payload);
     };
+
+    // Verificamos si estamos editando para bloquear campos
+    const isEditing = !!transactionToEdit;
 
     return (
         <TravesiaModal
             isOpen={isOpen}
             onClose={onClose}
-            title={transactionToEdit ? `Editar Transacción #${transactionToEdit.id}` : "Nueva Transacción"}
+            title={isEditing ? "Editar Transacción" : "Nueva Transacción"}
             size="md"
             actions={
                 <div className="flex justify-end gap-2 w-full">
@@ -106,14 +116,30 @@ export const TransactionFormModal = ({ isOpen, onClose, transactionToEdit }: Pro
             <form className="space-y-4 pt-2">
                 
                 {/* Monto y Estado */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="w-full">
+                    {/* ✅ BLOQUEO DE MONTO AL EDITAR */}
                     <TravesiaInput
                         label="Monto (Bs)"
                         type="number"
                         step="0.01"
                         placeholder="0.00"
+                        readOnly={isEditing} // Jamás se edita si existe
+                        className={`font-mono font-bold ${isEditing ? "bg-base-200 text-base-content/50 cursor-not-allowed" : ""}`}
+                        helperText={isEditing ? "El monto no puede modificarse" : undefined}
                         {...register("amount")}
                         error={errors.amount?.message as string}
+                    />
+                </div>
+
+                {/* ✅ FECHA CORREGIDA CON INPUT NATIVO DATE */}
+                <div className="grid grid-cols-2 gap-4">
+                    <TravesiaInput
+                        label="Fecha de Transacción"
+                        type="date"
+                        max={today} // No permitir fechas futuras
+                        isRequired
+                        {...register("transactionDate")}
+                        error={errors.transactionDate?.message as string}
                     />
                     
                     <TravesiaSelect
@@ -122,17 +148,6 @@ export const TransactionFormModal = ({ isOpen, onClose, transactionToEdit }: Pro
                         isLoading={loadingStatuses}
                         {...register("statusType")}
                         error={errors.statusType?.message as string}
-                    />
-                </div>
-
-                {/* Fecha */}
-                <div className="w-full">
-                    <TravesiaDateTimePicker
-                        label="Fecha y Hora de Transacción"
-                        name="transactionDate"
-                        control={control}
-                        maxDate={new Date()} // No permitir fechas futuras
-                        helperText={errors.transactionDate?.message as string}
                     />
                 </div>
 
