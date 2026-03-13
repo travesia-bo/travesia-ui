@@ -43,20 +43,20 @@ const clientSchema = z.object({
         
         cityId: z.any().transform(Number).refine((n) => !isNaN(n) && n > 0, "Ciudad requerida"),
         // ✅ CORRECCIÓN: Quitamos { required_error: ... } y dejamos solo el .min()
-        birthDate: z.any()
-            .refine((val) => val !== null && val !== undefined && val !== "", "Fecha requerida")
-            .refine((val) => {
-                if (!val) return false; // Por seguridad
-                const today = new Date();
-                const dob = new Date(val);
-                let age = today.getFullYear() - dob.getFullYear();
-                const monthDiff = today.getMonth() - dob.getMonth();
-                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
-                    age--;
-                }
-                return age >= 18;
-            }, "Debe ser mayor de 18 años"),
-        // ✅ Asegurar que estos sean tratados como números en el esquema
+        // birthDate: z.any()
+        //     .refine((val) => val !== null && val !== undefined && val !== "", "Fecha requerida")
+        //     .refine((val) => {
+        //         if (!val) return false; // Por seguridad
+        //         const today = new Date();
+        //         const dob = new Date(val);
+        //         let age = today.getFullYear() - dob.getFullYear();
+        //         const monthDiff = today.getMonth() - dob.getMonth();
+        //         if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+        //             age--;
+        //         }
+        //         return age >= 18;
+        //     }, "Debe ser mayor de 18 años"),
+        // // ✅ Asegurar que estos sean tratados como números en el esquema
         clientType: z.any().transform(Number).refine((n) => !isNaN(n) && n > 0, "Tipo de cliente es requerido"),
         genderType: z.any().transform(Number).refine((n) => !isNaN(n) && n > 0, "Género es requerido"),
         grade: z.any().refine(val => val && val.trim() !== "", "El año/grado es requerido"),

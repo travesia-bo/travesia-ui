@@ -42,7 +42,7 @@ export const ReservationDetailModal = ({ reservation, onClose }: Props) => {
                 <div className="flex flex-col gap-4">
                     <h3 className="font-bold flex items-center gap-2 text-sm uppercase tracking-wide opacity-70 border-b pb-2">
                         <User size={16} className="text-primary"/> 
-                        Pasajeros ({reservation.clients.length})
+                        Clientes ({reservation.clients.length})
                     </h3>
 
                     {/* ✅ VISTA DESKTOP: Tabla Clásica */}
@@ -50,7 +50,7 @@ export const ReservationDetailModal = ({ reservation, onClose }: Props) => {
                         <table className="table table-sm w-full bg-base-100">
                             <thead className="bg-base-200/50">
                                 <tr className="text-base-content/60">
-                                    <th>Pasajero</th>
+                                    <th>Cliente</th>
                                     <th>Tipo</th>
                                     <th className="text-right">Acordado</th>
                                     <th className="text-right">Pagado</th>
@@ -78,7 +78,7 @@ export const ReservationDetailModal = ({ reservation, onClose }: Props) => {
                         </table>
                     </div>
 
-                    {/* ✅ VISTA MÓVIL: Tarjetas de Pasajeros */}
+                    {/* ✅ VISTA MÓVIL: Tarjetas de Clientes */}
                     <div className="md:hidden space-y-3">
                         {reservation.clients.map((client) => (
                             <div key={client.clientId} className="bg-base-100 p-3 rounded-xl border border-base-300 shadow-sm">
