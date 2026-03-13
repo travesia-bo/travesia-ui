@@ -28,7 +28,7 @@ export const BADGE_STYLES: Record<BadgeType, Record<string | number, string>> = 
         default: "badge-ghost"
     },
 
-    // 3. TRANSACCIONES (Ejemplo futuro)
+    // 3. TRANSACCIONES
     TRANSACTION_STATUS: {
         501: "badge-warning text-white",      // Pendiente
         502: "badge-success text-white",      // Confirmado

@@ -42,10 +42,7 @@ export const IncomePage = () => {
             render: (row) => (
                 <div className="flex flex-col">
                     <span className="font-bold text-sm">
-                        {format(new Date(row.transactionDate), "dd MMM, yyyy", { locale: es })}
-                    </span>
-                    <span className="text-xs opacity-60">
-                        {format(new Date(row.transactionDate), "HH:mm a")}
+                        {format(new Date(row.transactionDate), "MMMM dd, yyyy", { locale: es })}
                     </span>
                 </div>
             )
@@ -54,9 +51,12 @@ export const IncomePage = () => {
             header: "Método Pago", 
             accessorKey: "paymentMethodName",
             render: (row) => (
-                <div className="badge badge-sm badge-outline opacity-80">
-                    {row.paymentMethodName}
-                </div>
+                <TravesiaBadge 
+                    code={row.paymentMethodCode}
+                    label={row.paymentMethodName}
+                    type="PAYMENT_METHOD"
+                    className="scale-90 origin-left"
+                />
             )
         },
         { 
@@ -68,29 +68,13 @@ export const IncomePage = () => {
             header: "Estado", 
             render: (row) => (
                 <TravesiaBadge 
-                    className={getBadgeStyle('TRANSACTION_STATUS', row.statusCode)}
-                >
-                    {row.statusName}
-                </TravesiaBadge>
+                    code={row.statusCode}
+                    label={row.statusName}
+                    type="TRANSACTION_STATUS"
+                    className="scale-90 origin-left"
+                />
             )
         },
-        // { 
-        //     header: "Comprobante", 
-        //     render: (row) => row.proofUrl ? (
-        //         <a 
-        //             href={row.proofUrl} 
-        //             target="_blank" 
-        //             rel="noopener noreferrer" 
-        //             className="btn btn-xs btn-ghost gap-1 text-primary"
-        //         >
-        //             <ExternalLink size={14} /> Ver
-        //         </a>
-        //     ) : (
-        //         <span className="opacity-30 flex items-center gap-1 text-xs">
-        //             <ImageOff size={14} /> Sin img
-        //         </span>
-        //     )
-        // },
         { 
             header: "Monto", 
             className: "text-right",
