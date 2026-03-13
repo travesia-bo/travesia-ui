@@ -1,10 +1,8 @@
 import { useState } from "react";
-
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Wallet } from "lucide-react";
-// import { ExternalLink, ImageOff } from "lucide-react";
+import { Wallet, Eye } from "lucide-react"; // ✅ Importar Eye
 
 // Componentes Reutilizables
 import { TravesiaTable, type Column } from "../../../components/ui/TravesiaTable";
@@ -13,36 +11,45 @@ import { BtnExcel, CrudButtons } from "../../../components/ui/CrudButtons";
 
 // Configuración y Servicios
 import { getTransactions } from "../services/transactionService";
-import { getBadgeStyle } from "../../../config/badgeConfig";
 import type { TransactionResponse } from "../types";
 
 import { TransactionFormModal } from "../components/TransactionFormModal";
-
+// ✅ IMPORTAR NUEVO MODAL
+import { TransactionDetailsModal } from "../components/TransactionDetailsModal";
 
 export const IncomePage = () => {
+    // Estados Modal Edición
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [transactionToEdit, setTransactionToEdit] = useState<TransactionResponse | null>(null);
     
+    // ✅ Estados Modal Detalles (Ojo)
+    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+    const [transactionToView, setTransactionToView] = useState<TransactionResponse | null>(null);
+
     const { data: transactions = [], isLoading } = useQuery({
         queryKey: ['finance', 'income'],
         queryFn: getTransactions,
         staleTime: 1000 * 60 * 5, // 5 min cache
     });
     
-    // ✅ Handler para abrir edición
     const handleEdit = (transaction: TransactionResponse) => {
         setTransactionToEdit(transaction);
         setIsEditModalOpen(true);
     };
 
-    // Definición de Columnas para TravesiaTable
+    // ✅ Función para abrir Detalles
+    const handleViewDetails = (transaction: TransactionResponse) => {
+        setTransactionToView(transaction);
+        setIsDetailsModalOpen(true);
+    };
+
     const columns: Column<TransactionResponse>[] = [
         { 
             header: "Fecha", 
             render: (row) => (
                 <div className="flex flex-col">
                     <span className="font-bold text-sm">
-                        {format(new Date(row.transactionDate), "MMMM dd, yyyy", { locale: es })}
+                        {format(new Date(row.transactionDate), "dd MMM yyyy", { locale: es })}
                     </span>
                 </div>
             )
@@ -86,12 +93,24 @@ export const IncomePage = () => {
         },
         {
             header: "Acciones",
-            className: "text-right w-32",
+            className: "text-right w-36", // Un poco más ancho para que entren 3 botones
             render: (row) => (
-                <CrudButtons 
-                    onEdit={() => handleEdit(row)}
-                    onDelete={() => console.log("Lógica pendiente para borrar ID:", row.id)} 
-                />
+                <div className="flex items-center justify-end gap-2">
+                    {/* ✅ BOTÓN DE DETALLES (OJO) */}
+                    <button 
+                        className="btn btn-square btn-sm btn-ghost text-info hover:bg-info/10"
+                        onClick={() => handleViewDetails(row)}
+                        title="Ver desglose de aplicación"
+                    >
+                        <Eye size={18} />
+                    </button>
+                    
+                    {/* BOTONES CRUD ORIGINALES */}
+                    <CrudButtons 
+                        onEdit={() => handleEdit(row)}
+                        onDelete={() => console.log("Lógica pendiente para borrar ID:", row.id)} 
+                    />
+                </div>
             )
         }
     ];
@@ -117,10 +136,10 @@ export const IncomePage = () => {
                 data={transactions}
                 columns={columns}
                 isLoading={isLoading}
-                // Ejemplo de uso de rowClassName si quisieras resaltar filas pendientes
                 rowClassName={(row) => row.statusCode === 501 ? "bg-warning/5" : ""}
             />
-            {/* ✅ Modal de Edición */}
+
+            {/* Modal de Edición */}
             {isEditModalOpen && (
                 <TransactionFormModal 
                     isOpen={isEditModalOpen}
@@ -128,6 +147,13 @@ export const IncomePage = () => {
                     transactionToEdit={transactionToEdit}
                 />
             )}
+
+            {/* ✅ MODAL DE DETALLES */}
+            <TransactionDetailsModal
+                isOpen={isDetailsModalOpen}
+                onClose={() => { setIsDetailsModalOpen(false); setTransactionToView(null); }}
+                transaction={transactionToView}
+            />
         </div>
     );
 };

@@ -1,21 +1,22 @@
-// src/features/finance/types/index.ts
+export interface TransactionApplicationResponse {
+    appliedPaymentId: number;
+    clientFullName: string;
+    packageName: string;
+    reservationCode: string;
+    appliedAmount: number;
+}
 
 export interface TransactionResponse {
     id: number;
     amount: number;
-    transactionDate: string; // ISO String
-    
-    // Método de Pago
+    transactionDate: string; // ISO String de LocalDateTime
     paymentMethodName: string;
     paymentMethodCode: number;
-    
-    // Detalles
-    bankReference: string | null;
-    proofUrl: string | null;
-    
-    // Estado
+    bankReference?: string;
+    proofUrl?: string;
     statusName: string;
     statusCode: number;
+    applications: TransactionApplicationResponse[]; 
 }
 
 // ✅ NUEVO: DTO para actualizar transacción
