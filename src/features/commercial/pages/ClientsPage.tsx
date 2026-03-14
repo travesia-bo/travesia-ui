@@ -10,6 +10,7 @@ import type { ClientResponse } from '../types/index';
 import { TravesiaTable, type Column } from '../../../components/ui/TravesiaTable';
 import { TravesiaInput } from '../../../components/ui/TravesiaInput';
 import { CrudButtons } from '../../../components/ui/CrudButtons';
+import { ClientFormModal } from '../components/ClientFormModal';
 
 export const ClientsPage = () => {
     // 1. Data Fetching
@@ -23,6 +24,9 @@ export const ClientsPage = () => {
     const [searchReservation, setSearchReservation] = useState('');
 
     // 3. Lógica de Filtrado Local
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [clientToEdit, setClientToEdit] = useState<ClientResponse | null>(null);
+
     const filteredClients = useMemo(() => {
         return clients.filter(client => {
             // Filtro General (Nombre, CI, Email)
@@ -44,7 +48,8 @@ export const ClientsPage = () => {
 
     // 4. Handlers (Vacíos por ahora)
     const handleEdit = (client: ClientResponse) => {
-        console.log("Abrir modal de edición para:", client.id);
+        setClientToEdit(client);
+        setIsEditModalOpen(true);
     };
 
     const handleDelete = (client: ClientResponse) => {
@@ -191,7 +196,16 @@ export const ClientsPage = () => {
                 isLoading={isLoading} 
             />
 
-            {/* AQUÍ IRÁ EL MODAL MÁS ADELANTE */}
+            {isEditModalOpen && (
+                <ClientFormModal
+                    isOpen={isEditModalOpen}
+                    onClose={() => {
+                        setIsEditModalOpen(false);
+                        setClientToEdit(null);
+                    }}
+                    clientToEdit={clientToEdit}
+                />
+            )}
         </div>
     );
 };

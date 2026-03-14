@@ -33,18 +33,32 @@ export interface ClientResponse {
     identityCard: string;
     birthDate: string;
     grade: string;
-    
-    // Parámetros
+
+    // parameters
     genderTypeName: string;
     genderTypeCode: number;
     clientTypeName: string;
     clientTypeCode: number;
-    
-    // Académico
+
+    // Datos Académicos Aplanados
+    universityId: number;
     universityName: string;
+    universityAcronym: string;
+
+    facultyId: number;
     facultyName: string;
+    facultyAcronym: string;
+
+    careerId: number;
     careerName: string;
-    
-    // Reservas (Viene como string separado por comas: "RES-8B85E, RES-1C3A9")
+
+    // parameters
+    studyAreaTypeName: string;
+    studyAreaTypeCode: number;
+
+    // ciudad
+    cityId: number;
+    cityName: string;
+
     reservationCodes?: string;
 }
