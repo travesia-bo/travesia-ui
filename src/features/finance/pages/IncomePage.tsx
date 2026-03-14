@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
 import { Wallet, Eye } from "lucide-react";
 
 // Componentes Reutilizables
 import { TravesiaTable, type Column } from "../../../components/ui/TravesiaTable";
 import { TravesiaBadge } from "../../../components/ui/TravesiaBadge";
-import { BtnExcel, CrudButtons } from "../../../components/ui/CrudButtons";
+import { CrudButtons } from "../../../components/ui/CrudButtons";
 import { ConfirmationModal } from "../../../components/ui/ConfirmationModal";
 import { useToast } from "../../../context/ToastContext";
 
@@ -81,11 +80,12 @@ export const IncomePage = () => {
 
     const columns: Column<TransactionResponse>[] = [
         { 
-            header: "Fecha", 
+            header: "Fecha y Hora", 
             render: (row) => (
                 <div className="flex flex-col">
-                    <span className="font-bold text-sm">
-                        {format(new Date(row.transactionDate), "dd MMM yyyy", { locale: es })}
+                    {/* ✅ Formato exacto del banco + fuente monoespaciada para alinear números */}
+                    <span className="font-bold text-sm font-mono text-base-content/90">
+                        {format(new Date(row.transactionDate), "dd/MM/yyyy HH:mm:ss")}
                     </span>
                 </div>
             )
@@ -152,7 +152,7 @@ export const IncomePage = () => {
     ];
 
     return (
-        <div className="p-6 space-y-6 animate-fade-in container mx-auto max-w-7xl">
+        <div className="p-6 space-y-6 animate-fade-in">
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-base-200 pb-4">
                 <div>
@@ -164,7 +164,7 @@ export const IncomePage = () => {
                         Control de flujo de caja y conciliación bancaria.
                     </p>
                 </div>
-                <BtnExcel />
+                {/* <BtnExcel /> */}
             </div>
 
             {/* Tabla */}

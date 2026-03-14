@@ -149,7 +149,7 @@ export const ClientsPage = () => {
     ];
 
     return (
-        <div className="p-6 space-y-6 animate-fade-in container mx-auto max-w-7xl">
+        <div className="p-6 space-y-6 animate-fade-in">
             {/* Header sin botón de Crear */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-base-200 pb-4">
                 <div>

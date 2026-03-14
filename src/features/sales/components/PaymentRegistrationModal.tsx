@@ -60,7 +60,12 @@ export const PaymentRegistrationModal = ({ isOpen, onClose }: Props) => {
     });
 
     // Obtenemos la fecha de hoy para el valor por defecto (YYYY-MM-DD)
-    const today = new Date().toISOString().split('T')[0];
+    const getLocalDatetime = () => {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        return now.toISOString().slice(0, 19); 
+    };
+    const currentDateTime = getLocalDatetime();
 
     // 2. ✅ AÑADIMOS 'register', 'errors' Y EL DEFAULT VALUE DE LA FECHA
     const { register, control, trigger, getValues, watch, reset, formState: { errors, submitCount } } = useForm({
@@ -69,7 +74,7 @@ export const PaymentRegistrationModal = ({ isOpen, onClose }: Props) => {
             totalAmount: 0, 
             paymentMethodType: 0, 
             bankReference: "",
-            transactionDate: today
+            transactionDate: currentDateTime
         },
         mode: "onChange"
     });
@@ -82,7 +87,7 @@ export const PaymentRegistrationModal = ({ isOpen, onClose }: Props) => {
                 totalAmount: 0,
                 paymentMethodType: 0,
                 bankReference: "",
-                transactionDate: new Date().toISOString().split('T')[0] // Forzar la fecha actual
+                transactionDate: getLocalDatetime()
             });
         }
     }, [isOpen, reset]);
@@ -200,7 +205,7 @@ export const PaymentRegistrationModal = ({ isOpen, onClose }: Props) => {
             totalAmount: dataStep1.totalAmount,
             paymentMethodType: dataStep1.paymentMethodType,
             bankReference: dataStep1.bankReference,
-            transactionDate: `${dataStep1.transactionDate}T00:00:00`,
+            transactionDate: dataStep1.transactionDate,
             proofUrl: null,
             applications: applications.map(app => ({
                 reservationClientId: app.debt.id,
@@ -326,7 +331,7 @@ export const PaymentRegistrationModal = ({ isOpen, onClose }: Props) => {
 
                                 <TravesiaInput
                                     label="Fecha de Transacción"
-                                    type="date"
+                                    type="datetime-local"
                                     isRequired
                                     {...register("transactionDate")}
                                     error={errors.transactionDate?.message as string}

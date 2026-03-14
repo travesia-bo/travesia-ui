@@ -42,13 +42,17 @@ export const TransactionFormModal = ({ isOpen, onClose, transactionToEdit }: Pro
     const { parameters: statuses, isLoading: loadingStatuses } = useParameters(PARAM_CATEGORIES.TRANSACTION_STATUS);
 
     // Formatear hoy como YYYY-MM-DD
-    const today = new Date().toISOString().split('T')[0];
+    const getLocalDatetime = () => {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        return now.toISOString().slice(0, 19); 
+    };
 
     const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm({
         resolver: zodResolver(schema),
         defaultValues: {
             amount: 0,
-            transactionDate: today, // Por defecto hoy
+            transactionDate: getLocalDatetime(),
             paymentMethodType: 0,
             bankReference: "",
             statusType: 0
@@ -60,8 +64,7 @@ export const TransactionFormModal = ({ isOpen, onClose, transactionToEdit }: Pro
         if (isOpen && transactionToEdit) {
             reset({
                 amount: transactionToEdit.amount,
-                // EXTRAEMOS SOLO EL DÍA (Evita el bug del salto de día por TimeZone)
-                transactionDate: transactionToEdit.transactionDate.split('T')[0], 
+                transactionDate: transactionToEdit.transactionDate.slice(0, 19),
                 paymentMethodType: transactionToEdit.paymentMethodCode,
                 bankReference: transactionToEdit.bankReference || "",
                 statusType: transactionToEdit.statusCode
@@ -87,7 +90,7 @@ export const TransactionFormModal = ({ isOpen, onClose, transactionToEdit }: Pro
         const payload = {
             ...data,
             // Al string YYYY-MM-DD le pegamos siempre la medianoche. ¡Adiós bug de TimeZone!
-            transactionDate: `${data.transactionDate}T00:00:00`,
+            transactionDate: data.transactionDate,
             proofUrl: transactionToEdit?.proofUrl 
         };
         
@@ -135,8 +138,8 @@ export const TransactionFormModal = ({ isOpen, onClose, transactionToEdit }: Pro
                 <div className="grid grid-cols-2 gap-4">
                     <TravesiaInput
                         label="Fecha de Transacción"
-                        type="date"
-                        max={today} // No permitir fechas futuras
+                        type="datetime-local"
+                        step="1" 
                         isRequired
                         {...register("transactionDate")}
                         error={errors.transactionDate?.message as string}
