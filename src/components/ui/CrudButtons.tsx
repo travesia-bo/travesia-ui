@@ -50,6 +50,26 @@ export const BtnDeleteIcon = (props: BaseBtnProps) => (
     />
 );
 
+// 4.1 BOTÓN EXCEL TABLA (Redondo)
+export const BtnExcelIcon = (props: BaseBtnProps) => (
+    <TravesiaButton 
+        variant="excel" 
+        isIconOnly 
+        icon={<FileSpreadsheet size={16} />} 
+        {...props} 
+    />
+);
+
+// 4.2 BOTÓN PDF TABLA (Redondo)
+export const BtnPDFIcon = (props: BaseBtnProps) => (
+    <TravesiaButton 
+        variant="pdf" 
+        isIconOnly 
+        icon={<FileText size={16} />} 
+        {...props} 
+    />
+);
+
 
 // 5. BOTÓN ELIMINAR NORMAL (Con texto, para confirmaciones)
 export const BtnDelete = ({ label = "Eliminar", responsive = true, ...props }: BaseBtnProps) => (
@@ -141,9 +161,44 @@ interface CrudButtonsProps {
 
 export const CrudButtons = ({ onEdit, onDelete }: CrudButtonsProps) => {
     return (
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-1.5">
             <BtnEdit onClick={onEdit} />
             <BtnDeleteIcon onClick={onDelete} />
+        </div>
+    );
+};
+
+// ✅ NUEVO: Componente dedicado a exportaciones (Manteniendo el estilo REDONDO original)
+interface ExportButtonsProps {
+    onExportExcel: () => void;
+    onExportPDF: () => void;
+    disabled?: boolean;
+}
+
+export const ExportButtons = ({ onExportExcel, onExportPDF, disabled = false }: ExportButtonsProps) => {
+    return (
+        <div 
+            className={`flex justify-end gap-1.5 ${disabled ? 'opacity-40 grayscale cursor-not-allowed' : ''}`}
+            title={disabled ? "Sin registros para exportar" : ""}
+        >
+            {/* Envolvemos en pointer-events-none cuando está deshabilitado 
+                para matar el hover y el click, pero mantenemos TUS botones redondos.
+            */}
+            <div className={disabled ? "pointer-events-none" : ""}>
+                <BtnExcelIcon 
+                    onClick={onExportExcel} 
+                    disabled={disabled} 
+                    title={!disabled ? "Exportar lista a Excel" : undefined}
+                />
+            </div>
+            
+            <div className={disabled ? "pointer-events-none" : ""}>
+                <BtnPDFIcon 
+                    onClick={onExportPDF} 
+                    disabled={disabled} 
+                    title={!disabled ? "Exportar lista a PDF" : undefined}
+                />
+            </div>
         </div>
     );
 };

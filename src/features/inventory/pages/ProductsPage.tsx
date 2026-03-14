@@ -5,9 +5,9 @@ import { MapPin, Package, Users } from 'lucide-react';
 // Hooks y Servicios
 import { useProducts } from '../hooks/useProducts';
 import { useProviders } from '../hooks/useProviders';
-import { useParameters } from '../../../hooks/useParameters'; // ✅ Importar Hook
-import { updateProductStatus, deleteProduct } from '../services/productService';
-import { PARAM_CATEGORIES } from '../../../config/constants'; // ✅ Importar Constante
+import { useParameters } from '../../../hooks/useParameters'; 
+import { updateProductStatus, deleteProduct, exportProductClientsExcel, exportProductClientsPDF } from '../services/productService';
+import { PARAM_CATEGORIES } from '../../../config/constants'; 
 import { useToast } from '../../../context/ToastContext';
 
 // UI Components
@@ -15,7 +15,7 @@ import { TravesiaTable, type Column } from '../../../components/ui/TravesiaTable
 import { TravesiaInput } from '../../../components/ui/TravesiaInput';
 import { TravesiaSelect } from '../../../components/ui/TravesiaSelect';
 import { RichSelect } from '../../../components/ui/RichSelect';
-import { CrudButtons, BtnCreate } from '../../../components/ui/CrudButtons';
+import { CrudButtons, BtnCreate, ExportButtons } from '../../../components/ui/CrudButtons';
 import { ConfirmationModal } from '../../../components/ui/ConfirmationModal';
 import { TravesiaBadge } from '../../../components/ui/TravesiaBadge'; 
 import { TravesiaSwitch } from '../../../components/ui/TravesiaSwitch';
@@ -125,6 +125,44 @@ export const ProductsPage = () => {
     const handleEdit = (product: Product) => {
         setEditingProduct(product);
         setIsFormModalOpen(true);
+    };
+
+    // --- HANDLERS DE EXPORTACIÓN ---
+    const handleExportExcel = async (product: Product) => {
+        try {
+            success(`Generando Excel para ${product.name}...`);
+            const blob = await exportProductClientsExcel(product.id);
+            
+            // Lógica nativa de HTML5 para forzar descarga
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Clientes_${product.name.replace(/\s+/g, '_')}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            toastError("Error al generar el reporte en Excel.");
+        }
+    };
+
+    const handleExportPDF = async (product: Product) => {
+        try {
+            success(`Generando PDF para ${product.name}...`);
+            const blob = await exportProductClientsPDF(product.id);
+            
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Clientes_${product.name.replace(/\s+/g, '_')}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            toastError("Error al generar el reporte en PDF.");
+        }
     };
     
     // ✅ LÓGICA DE COLORES POR FILA (CARD VERDE)
@@ -257,16 +295,35 @@ export const ProductsPage = () => {
         }] : []), // Si no tiene permiso, agrega un array vacío (no renderiza nada)
         {
             header: 'Acciones',
-            className: 'text-right',
-            render: (row) => (
-                <CrudButtons 
-                    onEdit={() => handleEdit(row)} 
-                    onDelete={() => {
-                        setProductToDelete(row);     
-                        setIsDeleteModalOpen(true);  
-                    }} 
-                />
-            )
+            className: 'text-right w-48', // Un poco más ancho para los 4 botones + el separador
+            render: (row) => {
+                // Validación: Si el stock disponible es igual al físico, nadie ha comprado aún.
+                const hasNoRegistrations = row.availableStock === row.physicalStock;
+
+                return (
+                    <div className="flex items-center justify-end gap-3">
+                        
+                        {/* ✅ 1. Botones de Exportación Independientes */}
+                        <ExportButtons 
+                            onExportExcel={() => handleExportExcel(row)}
+                            onExportPDF={() => handleExportPDF(row)}
+                            disabled={hasNoRegistrations} 
+                        />
+
+                        {/* Pequeño separador visual */}
+                        <div className="w-px h-6 bg-base-300"></div>
+
+                        {/* ✅ 2. Botones CRUD Originales */}
+                        <CrudButtons 
+                            onEdit={() => handleEdit(row)} 
+                            onDelete={() => {
+                                setProductToDelete(row);     
+                                setIsDeleteModalOpen(true);  
+                            }} 
+                        />
+                    </div>
+                );
+            }
         }
     ];
     

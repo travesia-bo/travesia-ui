@@ -41,3 +41,17 @@ export const useLocations = () => {
         staleTime: 1000 * 60 * 10, // 10 min cache
     });
 };
+
+export const exportProductClientsExcel = async (productId: number): Promise<Blob> => {
+    const { data } = await api.get(`/sales/reports/products/${productId}/clients/export-excel`, {
+        responseType: 'blob' // 🔴 CRÍTICO PARA ARCHIVOS
+    });
+    return data;
+};
+
+export const exportProductClientsPDF = async (productId: number): Promise<Blob> => {
+    const { data } = await api.get(`/sales/reports/products/${productId}/clients/export-pdf`, {
+        responseType: 'blob' // 🔴 CRÍTICO PARA ARCHIVOS
+    });
+    return data;
+};
