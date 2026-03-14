@@ -14,6 +14,7 @@ import { SellerCatalogPage } from "../features/sales/pages/SellerCatalogPage";
 import { ReservationsPage } from "../features/sales/pages/ReservationsPage";
 import { FinancialReportPage } from "../features/sales/pages/FinancialReportPage";
 import IncomePage from "../features/finance/pages/IncomePage";
+import { ClientsPage } from "../features/commercial/pages/ClientsPage";
 
 export const AppRouter = () => {
   useTheme(); 
@@ -36,6 +37,7 @@ export const AppRouter = () => {
                 <Route path="/commercial/products" element={<ProductsPage />} />
                 <Route path="/commercial/packages" element={<PackagesPage />} />
                 <Route path="/commercial/sellers" element={<SellerPage />} />
+                <Route path="/commercial/clients" element={<ClientsPage />} />
                 {/* --- MÓDULO DE VENTAS --- */}
                 <Route path="/sales/pos" element={<SellerCatalogPage />} />
                 <Route path="/sales/reservations" element={<ReservationsPage />} />
